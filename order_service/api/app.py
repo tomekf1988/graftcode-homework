@@ -14,6 +14,7 @@ from order_service.domain.exceptions import (
     InvalidOrderRequestError,
     OrderNotFoundError,
     OrderPlacementError,
+    PricingServiceUnavailableError,
 )
 
 
@@ -30,6 +31,7 @@ def create_app() -> FastAPI:
     app.add_exception_handler(InvalidOrderRequestError, invalid_order_request_handler)
     app.add_exception_handler(OrderNotFoundError, order_not_found_handler)
     app.add_exception_handler(OrderPlacementError, order_placement_handler)
+    app.add_exception_handler(PricingServiceUnavailableError, order_placement_handler)
 
     app.include_router(orders_router)
 

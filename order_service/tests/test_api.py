@@ -30,7 +30,7 @@ def unavailable_client():
     app = create_app()
     unavailable = OrderService(UnavailablePricingProvider())
     app.dependency_overrides[get_order_service] = lambda: unavailable
-    with TestClient(app, raise_server_exceptions=False) as c:
+    with TestClient(app) as c:
         yield c
 
 

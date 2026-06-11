@@ -5,6 +5,7 @@ from order_service.domain.exceptions import (
     InvalidOrderRequestError,
     OrderNotFoundError,
     OrderPlacementError,
+    PricingServiceUnavailableError,
 )
 
 
@@ -21,6 +22,6 @@ async def order_not_found_handler(
 
 
 async def order_placement_handler(
-    _request: Request, exc: OrderPlacementError
+    _request: Request, exc: OrderPlacementError | PricingServiceUnavailableError
 ) -> JSONResponse:
     return JSONResponse(status_code=503, content={"detail": str(exc)})
