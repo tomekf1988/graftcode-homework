@@ -6,6 +6,7 @@ from order_service.api.error_handlers import (
     invalid_order_request_handler,
     order_not_found_handler,
     order_placement_handler,
+    pricing_service_unavailable_handler,
 )
 from order_service.api.routers.orders import router as orders_router
 from order_service.bootstrap.factory import create_order_service_from_settings
@@ -31,7 +32,7 @@ def create_app() -> FastAPI:
     app.add_exception_handler(InvalidOrderRequestError, invalid_order_request_handler)
     app.add_exception_handler(OrderNotFoundError, order_not_found_handler)
     app.add_exception_handler(OrderPlacementError, order_placement_handler)
-    app.add_exception_handler(PricingServiceUnavailableError, order_placement_handler)
+    app.add_exception_handler(PricingServiceUnavailableError, pricing_service_unavailable_handler)
 
     app.include_router(orders_router)
 
