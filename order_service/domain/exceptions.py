@@ -12,3 +12,11 @@ class PricingServiceUnavailableError(OrderError):
 
 class PricingServiceTimeoutError(OrderError):
     pass
+
+
+class InvalidOrderRequestError(OrderError):
+    pass
+
+
+class OrderNotFoundError(OrderError):
+    pass

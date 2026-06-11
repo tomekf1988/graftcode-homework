@@ -5,6 +5,7 @@ from pricing_service.bootstrap.factory import (
     create_pricing_service,
 )
 from pricing_service.domain.customer_type import CustomerType
+from pricing_service.domain.exceptions import UnsupportedCustomerTypeError
 from pricing_service.contracts.price_calculation_input import (
     PriceCalculationInput,
 )
@@ -22,11 +23,18 @@ class LocalPricingProvider(PricingProvider):
         customer_type: str,
     ) -> PricingQuote:
 
+        try:
+            customer_type_enum = CustomerType(customer_type)
+        except ValueError:
+            raise UnsupportedCustomerTypeError(
+                f"Unsupported customer type: '{customer_type}'"
+            )
+
         result = self._pricing_service.calculate_price(
             PriceCalculationInput(
                 product_id=product_id,
                 quantity=quantity,
-                customer_type=CustomerType(customer_type),
+                customer_type=customer_type_enum,
             )
         )
 
