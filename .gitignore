@@ -8,3 +8,13 @@ wheels/
 
 # Virtual environments
 .venv
+
+# Local environment and secrets
+.env
+
+# macOS
+.DS_Store
+
+# Tools and caches
+.claude/settings.local.json
+.pytest_cache/

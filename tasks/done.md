@@ -1,3 +1,17 @@
+# DONE — Milestone 2
+
+- [x] Create `order_service/config/settings.py` — `Settings` dataclass + `load_settings()` (stdlib only)
+- [x] `load_settings()` normalises `PRICING_MODE` to lowercase before parsing
+- [x] `load_settings()` validates `GRAFTCODE_PROJECT_KEY` is present when `PRICING_MODE=remote`
+- [x] Update `order_service/bootstrap/factory.py`: add `create_order_service_from_settings(settings)`
+- [x] Rewrite `main.py` as working demo covering 6 scenarios
+- [x] Create `.env.example`
+- [x] Create `.gitignore`
+- [x] Create `order_service/tests/test_settings.py` (6 tests including case-insensitivity)
+- [x] All 26 tests pass (`uv run pytest -q`)
+
+---
+
 # DONE — Milestone 1
 
 - [x] Add `UnsupportedCustomerTypeError` to `pricing_service/domain/exceptions.py`
