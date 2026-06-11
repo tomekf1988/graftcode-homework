@@ -4,10 +4,11 @@ import pytest
 from fastapi.testclient import TestClient
 
 from order_service.api.app import create_app
+from order_service.api.dependencies import get_order_service
 from order_service.bootstrap.factory import create_order_service
 from order_service.config.pricing_mode import PricingMode
 from order_service.domain.exceptions import PricingServiceUnavailableError
-from order_service.ports.pricing_provider import PricingProvider
+from order_service.services.order_service import OrderService
 
 
 class UnavailablePricingProvider:
@@ -18,18 +19,18 @@ class UnavailablePricingProvider:
 @pytest.fixture()
 def client():
     app = create_app()
-    app.state.order_service = create_order_service(PricingMode.LOCAL)
+    order_service = create_order_service(PricingMode.LOCAL)
+    app.dependency_overrides[get_order_service] = lambda: order_service
     with TestClient(app) as c:
         yield c
 
 
 @pytest.fixture()
 def unavailable_client():
-    from order_service.services.order_service import OrderService
-
     app = create_app()
+    unavailable = OrderService(UnavailablePricingProvider())
+    app.dependency_overrides[get_order_service] = lambda: unavailable
     with TestClient(app, raise_server_exceptions=False) as c:
-        app.state.order_service = OrderService(UnavailablePricingProvider())
         yield c
 
 
