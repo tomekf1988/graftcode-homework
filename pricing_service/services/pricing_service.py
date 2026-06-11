@@ -1,3 +1,4 @@
+import logging
 from decimal import Decimal
 
 from pricing_service.domain.exceptions import (
@@ -8,6 +9,8 @@ from pricing_service.domain.pricing_rules import PricingRulesEngine
 from pricing_service.domain.product_catalog import ProductCatalog
 from pricing_service.contracts.price_calculation_input import PriceCalculationInput
 from pricing_service.contracts.price_calculation_result import PriceCalculationResult
+
+logger = logging.getLogger(__name__)
 
 
 class PricingService:
@@ -24,6 +27,13 @@ class PricingService:
         self,
         request: PriceCalculationInput,
     ) -> PriceCalculationResult:
+
+        logger.info(
+            "Calculating price for product=%s qty=%s customer=%s",
+            request.product_id,
+            request.quantity,
+            request.customer_type,
+        )
 
         if request.quantity <= 0:
             raise InvalidQuantityError(
@@ -55,6 +65,12 @@ class PricingService:
 
         total_price = (
             subtotal * discount_multiplier
+        )
+
+        logger.debug(
+            "Applied discount=%s%% total=%s",
+            discount_percent,
+            total_price,
         )
 
         return PriceCalculationResult(

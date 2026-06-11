@@ -8,3 +8,7 @@ class ProductNotFoundError(PricingError):
 
 class InvalidQuantityError(PricingError):
     pass
+
+
+class UnsupportedCustomerTypeError(PricingError):
+    pass
