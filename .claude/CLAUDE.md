@@ -25,7 +25,7 @@ All milestones are defined in `docs/plans/pre_graftcode_milestones.md`.
 | # | Name | Status |
 |---|------|--------|
 | 1 | Domain & business logic completeness | ✅ done |
-| 2 | Configuration (env vars) | pending |
+| 2 | Configuration (env vars) | ✅ done |
 | 3 | HTTP API on Order Service (FastAPI) | pending |
 | 4 | Docker, Docker Compose, Makefile | pending |
 | 5 | README & documentation | pending |
@@ -73,3 +73,28 @@ import, which is acceptable because the adapter already bridges the two domains.
 ### Test strategy
 Fakes (simple classes) over mocks. Inline fakes in test files when used only once;
 shared fakes in `tests/fakes/` when reused across multiple test modules.
+
+---
+
+## Architecture decisions (Milestone 2)
+
+### Settings as a frozen dataclass (`order_service/config/settings.py`)
+`Settings` is a frozen dataclass produced once by `load_settings()` at startup. Stdlib
+only (`os`, `dataclasses`) — no pydantic or python-dotenv. Validated at load time so
+misconfiguration fails fast with a clear message.
+
+### `PRICING_MODE` normalised to lowercase
+`os.environ.get("PRICING_MODE", "local").lower()` before enum parsing, so `LOCAL`,
+`Local`, and `local` all resolve correctly. Env vars are idiomatically upper-cased so
+this avoids a common misconfiguration.
+
+### `graftcode_project_key` validated but not injected
+`load_settings()` validates the key is present when `PRICING_MODE=remote`, but the
+factory does not pass it to `RemotePricingProvider` yet — the provider reads the env
+var directly. Wiring the key through is deferred to the milestone that fully implements
+remote mode (Milestone 6).
+
+### Factory backward compatibility
+`create_order_service_from_settings(settings)` was added to `factory.py` alongside
+the unchanged `create_order_service(mode)`. Existing callers (tests) continue to work
+without modification.

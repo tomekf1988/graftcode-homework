@@ -1,3 +1,3 @@
 # IN PROGRESS
 
-(empty — all Milestone 1 tasks completed)
+_(nothing in progress)_
