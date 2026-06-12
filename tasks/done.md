@@ -1,3 +1,17 @@
+# DONE — Milestone 3
+
+- [x] Add `fastapi>=0.115` and `uvicorn[standard]>=0.34` to `pyproject.toml` (runtime)
+- [x] Move `pytest` and `httpx` to `[dependency-groups] dev`
+- [x] Create `order_service/api/schemas.py` — `PlaceOrderRequest`, `OrderResponse` with `from_result`
+- [x] Create `order_service/api/error_handlers.py` — `InvalidOrderRequestError`→400, `OrderNotFoundError`→404, `OrderPlacementError`→503
+- [x] Create `order_service/api/routers/orders.py` — `POST /orders` (201), `GET /orders/{order_id}` (200)
+- [x] Create `order_service/api/app.py` — FastAPI app + lifespan wiring via `app.state`
+- [x] Create `order_service/__main__.py` — uvicorn entry point
+- [x] Create `order_service/tests/test_api.py` — 10 tests (all status codes, lifespan smoke test)
+- [x] All 36 tests pass (`uv run pytest -q`)
+
+---
+
 # DONE — Milestone 2
 
 - [x] Create `order_service/config/settings.py` — `Settings` dataclass + `load_settings()` (stdlib only)

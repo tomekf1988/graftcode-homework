@@ -26,7 +26,7 @@ All milestones are defined in `docs/plans/pre_graftcode_milestones.md`.
 |---|------|--------|
 | 1 | Domain & business logic completeness | ✅ done |
 | 2 | Configuration (env vars) | ✅ done |
-| 3 | HTTP API on Order Service (FastAPI) | pending |
+| 3 | HTTP API on Order Service (FastAPI) | ✅ done |
 | 4 | Docker, Docker Compose, Makefile | pending |
 | 5 | README & documentation | pending |
 | 6 | GraftCode integration | pending (out of scope for now) |
@@ -98,3 +98,28 @@ remote mode (Milestone 6).
 `create_order_service_from_settings(settings)` was added to `factory.py` alongside
 the unchanged `create_order_service(mode)`. Existing callers (tests) continue to work
 without modification.
+
+---
+
+## Architecture decisions (Milestone 3)
+
+### FastAPI app wired via `app.state`
+`lifespan()` calls `load_settings()` → `create_order_service_from_settings(settings)`
+and stores the result in `app.state.order_service`. Route handlers read it via
+`request.app.state.order_service`. No global state, no DI framework needed.
+
+### `InvalidOrderRequestError` → 400 (not 422)
+FastAPI owns 422 for Pydantic schema validation. Domain rejections (unknown product,
+zero quantity, unsupported customer type) are semantically different and map to 400.
+
+### `pytest`/`httpx` in `[dependency-groups] dev`
+Test-only packages are kept out of production dependencies. `uv sync` installs them
+locally; `uv sync --no-dev` omits them in Docker.
+
+### `OrderResponse.from_result` classmethod
+Eliminates duplicated six-field constructor calls across the two route handlers.
+Single place to update if `OrderResult` grows fields.
+
+### Test fixture state injection
+When testing with a fake provider, `app.state.order_service` must be set *inside*
+the `with TestClient(app)` block (after lifespan runs), not before `__enter__`.
