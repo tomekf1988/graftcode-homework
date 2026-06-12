@@ -4,6 +4,12 @@ from order_service.domain.exceptions import InvalidOrderRequestError, OrderNotFo
 from graft_pypi_graftcode_homework.pricingservicegraft import PricingServiceGraft
 from graft_pypi_graftcode_homework.graft.pypi.graftcode_homework.graft_config import GraftConfig
 
+GraftConfig.host = "ws://localhost/ws"
+    
+service = PricingServiceGraft()
+result = service.calculate_price("laptop", 2, "premium")
+print(result)
+    
 
 def main() -> None:
     GraftConfig.host = "ws://localhost/ws"

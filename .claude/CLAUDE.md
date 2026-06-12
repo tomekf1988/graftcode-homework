@@ -20,16 +20,17 @@ All milestone-related files use the pattern `milestone_<number>_<short_name>`, e
 
 ## Milestones
 
-All milestones are defined in `docs/plans/pre_graftcode_milestones.md`.
+Original plan: `docs/plans/pre_graftcode_milestones.md`
+Revised plan (M4–6): `docs/plans/milestone_4_5_6_revised_plan.md`
 
 | # | Name | Status |
 |---|------|--------|
 | 1 | Domain & business logic completeness | ✅ done |
 | 2 | Configuration (env vars) | ✅ done |
 | 3 | HTTP API on Order Service (FastAPI) | ✅ done |
-| 4 | Docker, Docker Compose, Makefile | pending |
-| 5 | README & documentation | pending |
-| 6 | GraftCode integration | pending (out of scope for now) |
+| 4 | GraftCode integration (architecture refactor) | pending |
+| 5 | Docker, Docker Compose, Makefile | pending |
+| 6 | README & documentation | pending |
 
 ## Agents
 
