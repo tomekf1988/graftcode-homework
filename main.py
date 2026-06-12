@@ -30,7 +30,7 @@ def main() -> None:
     )
     print(result)
     happy_path_order_id = result.order_id
-
+    return 
     # Scenario 2: Product not found
     print("\n--- Scenario: product not found ---")
     try:
