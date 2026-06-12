@@ -1,15 +1,23 @@
-from order_service.bootstrap.factory import (
-    create_order_service,
-)
-from order_service.config.pricing_mode import (
-    PricingMode,
-)
+from unittest.mock import patch, MagicMock
+
+from order_service.bootstrap.factory import create_order_service
+from order_service.config.settings import Settings
+from order_service.services.order_service import OrderService
 
 
-def test_should_create_order_service_for_local_mode():
+@patch("order_service.bootstrap.factory.GraftPricingProvider")
+def test_returns_order_service_instance(mock_provider_cls):
+    mock_provider_cls.return_value = MagicMock()
 
-    service = create_order_service(
-        mode=PricingMode.LOCAL,
-    )
+    service = create_order_service(Settings(graft_host=None))
 
-    assert service is not None
+    assert isinstance(service, OrderService)
+
+
+@patch("order_service.bootstrap.factory.GraftPricingProvider")
+def test_passes_graft_host_to_provider(mock_provider_cls):
+    mock_provider_cls.return_value = MagicMock()
+
+    create_order_service(Settings(graft_host="ws://pricing/ws"))
+
+    mock_provider_cls.assert_called_once_with(host="ws://pricing/ws")

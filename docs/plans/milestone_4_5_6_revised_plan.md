@@ -2,31 +2,31 @@
 
 ## Context
 
-Oryginalna architektura miała:
-- `LocalPricingProvider` → bezpośrednie wywołanie `PricingService` (in-process)
-- `RemotePricingProvider` → stub rzucający `ConnectionError`
-- `OrderService` importujący wyjątki z `pricing_service.domain.exceptions` (naruszenie granic serwisów)
-- Milestone 6 (GraftCode) oznaczony jako "out of scope"
+Original architecture had:
+- `LocalPricingProvider` → direct in-process call to `PricingService`
+- `RemotePricingProvider` → stub that always raised `ConnectionError`
+- `OrderService` importing exceptions from `pricing_service.domain.exceptions` (service boundary violation)
+- Milestone 6 (GraftCode) marked as "out of scope"
 
-Po zainstalowaniu wygenerowanego klienta Graft:
-- **Remote mode działa**: `GraftConfig.host = "ws://localhost/ws"` + `PricingServiceGraft()`
-- **Local mode (in-memory)** nie działa — bug Graft alpha
-- Graft integration wchodzi do zakresu — stary Milestone 6 zostaje wchłonięty przez nowy Milestone 4
+After installing the Graft-generated client:
+- **Remote mode works**: `GraftConfig.host = "ws://localhost/ws"` + `PricingServiceGraft()`
+- **Local mode (in-memory)** does not work — bug in Graft alpha
+- Graft integration is now in scope — old Milestone 6 absorbed into new Milestone 4
 
-Milestony zostają przeorganizowane:
+Milestones reorganised:
 
-| # | Nazwa | Status |
-|---|-------|--------|
+| # | Name | Status |
+|---|------|--------|
 | 1 | Domain & business logic | ✅ done |
 | 2 | Configuration | ✅ done |
 | 3 | HTTP API (FastAPI) | ✅ done |
-| **4** | **GraftCode integration (architecture refactor)** | pending |
+| **4** | **GraftCode integration (architecture refactor)** | ✅ done |
 | **5** | **Docker, Docker Compose, Makefile** | pending |
 | **6** | **README & documentation** | pending |
 
 ---
 
-## Instalacja paczki Graft
+## Installing the Graft package
 
 ```bash
 uv pip install \
@@ -34,7 +34,7 @@ uv pip install \
   graft-pypi-graftcode-homework==0.1.0
 ```
 
-Import po stronie klienta (order service):
+Client-side imports (order service):
 ```python
 from graft_pypi_graftcode_homework.pricingservicegraft import PricingServiceGraft
 from graft_pypi_graftcode_homework.graft.pypi.graftcode_homework.graft_config import GraftConfig
@@ -42,37 +42,37 @@ from graft_pypi_graftcode_homework.graft.pypi.graftcode_homework.graft_config im
 
 ---
 
-## Docelowa architektura
+## Target architecture
 
 ```
-OrderService (zna tylko order_service.*)
+OrderService (knows only order_service.*)
      │
      ▼
 PricingProvider (protocol, order_service/ports/)
      │
      ▼
 GraftPricingProvider (adapter, order_service/adapters/)
-     │
+     │  reads GRAFT_HOST env var, sets GraftConfig.host
      ▼
-PricingServiceGraft (klient wygenerowany — graft_pypi_graftcode_homework)
-     │ REMOTE: GraftConfig.host = settings.graft_host
-     │ LOCAL:  GraftConfig.host nie ustawiony (bug Graft — nie działa)
+PricingServiceGraft (generated client — graft_pypi_graftcode_homework)
+     │ REMOTE: GraftConfig.host = GRAFT_HOST env var
+     │ LOCAL:  no host set (in-memory; Graft alpha bug — does not work)
      ▼
 gg Gateway → PricingServiceGraft (server-side, pricing_service/graft/)
 ```
 
-**Kluczowe zasady:**
-- `order_service` ma ZERO importów z `pricing_service.*`
-- `GraftPricingProvider` tłumaczy błędy Graft na `order_service.domain.exceptions`
-- `PricingProvider` protokół pozostaje — umożliwia fake'i w testach
+**Key rules:**
+- `order_service` has zero imports from `pricing_service.*`
+- `GraftPricingProvider` translates Graft errors to `order_service.domain.exceptions`
+- `PricingProvider` protocol is kept — enables fakes in tests
 
 ---
 
-## Milestone 4: GraftCode integration (architecture refactor)
+## Milestone 4: GraftCode integration (architecture refactor) ✅
 
-### Krok 1: Zbadaj wyjątki Graft (przed napisaniem adaptera)
+### Step 1: Investigate Graft exceptions
 
-Uruchom skrypt z działającym lokalnie `gg` i serwisem Pricing:
+Run a diagnostic script with `gg` and the Pricing Service running:
 
 ```python
 from graft_pypi_graftcode_homework.pricingservicegraft import PricingServiceGraft
@@ -82,9 +82,9 @@ GraftConfig.host = "ws://localhost/ws"
 service = PricingServiceGraft()
 
 for label, args in [
-    ("nieznany produkt", ("unknown_product", 1, "regular")),
-    ("quantity=0",       ("laptop", 0, "regular")),
-    ("nieznany customer",("laptop", 1, "vip")),
+    ("unknown product", ("unknown_product", 1, "regular")),
+    ("quantity=0",      ("laptop", 0, "regular")),
+    ("unknown customer",("laptop", 1, "vip")),
 ]:
     try:
         print(label, "→", service.calculate_price(*args))
@@ -92,22 +92,20 @@ for label, args in [
         print(label, f"→ {type(e).__module__}.{type(e).__name__}: {e}")
 ```
 
-Na podstawie wyników ustalić w adapterze:
-- Czy graft re-rzuca oryginalne wyjątki z `pricing_service.domain.exceptions` → mapować po typie
-- Czy rzuca własne typy (np. `GraftError`, `GraftCallError`) → mapować po klasie lub treści wiadomości
-- Czy błędy domenowe wracają jako poprawna odpowiedź JSON z polem `error` → parsować response
+**Result**: all domain errors raise `HypertubeException`. `exc.name` is the string
+representation of the exception class (not useful for discrimination). `exc.message`
+carries the error text. Decision: `HypertubeException` → `InvalidOrderRequestError`,
+all other exceptions → `PricingServiceUnavailableError`.
 
----
+### Step 2: Remove `pricing_service.*` from `order_service`
 
-### Krok 2: Usuń `pricing_service.*` z `order_service`
-
-**Pliki do usunięcia:**
+**Deleted:**
 - `order_service/adapters/local_pricing_provider.py`
 - `order_service/adapters/remote_pricing_provider.py`
 
-**Zmień: `order_service/services/order_service.py`**
+**Changed: `order_service/services/order_service.py`**
 
-Usuń import:
+Removed import:
 ```python
 from pricing_service.domain.exceptions import (
     ProductNotFoundError,
@@ -116,133 +114,79 @@ from pricing_service.domain.exceptions import (
 )
 ```
 
-Uproszczona logika catch — błędy domenowe tłumaczy adapter, `OrderService` nie musi znać typów z pricing:
+Simplified catch — adapter handles translation, `OrderService` no longer needs pricing types:
 ```python
 try:
     quote = self._pricing_provider.calculate_price(...)
 except PricingServiceUnavailableError as exc:
     raise OrderPlacementError("Unable to place order because pricing service is unavailable.") from exc
-# InvalidOrderRequestError propaguje naturalnie
+# InvalidOrderRequestError propagates naturally
 ```
 
----
-
-### Krok 3: Nowy adapter `order_service/adapters/graft_pricing_provider.py`
+### Step 3: New adapter `order_service/adapters/graft_pricing_provider.py`
 
 ```python
-import json
-from decimal import Decimal
-
-from graft_pypi_graftcode_homework.pricingservicegraft import PricingServiceGraft
-from order_service.contracts.pricing_quote import PricingQuote
-from order_service.domain.exceptions import (
-    InvalidOrderRequestError,
-    PricingServiceUnavailableError,
-)
-from order_service.ports.pricing_provider import PricingProvider
-
-
 class GraftPricingProvider(PricingProvider):
 
     def __init__(self):
+        host = os.environ.get("GRAFT_HOST")
+        if host:
+            GraftConfig.host = host
         self._client = PricingServiceGraft()
 
-    def calculate_price(
-        self,
-        product_id: str,
-        quantity: int,
-        customer_type: str,
-    ) -> PricingQuote:
+    def calculate_price(self, product_id, quantity, customer_type) -> PricingQuote:
         try:
             result_json = self._client.calculate_price(product_id, quantity, customer_type)
             result = json.loads(result_json)
-            return PricingQuote(
-                product_id=result["product_id"],
-                unit_price=Decimal(result["unit_price"]),
-                quantity=result["quantity"],
-                discount_percent=Decimal(result["discount_percent"]),
-                total_price=Decimal(result["total_price"]),
-            )
-        except <DomainValidationException> as exc:   # ← uzupełnić po Kroku 1
-            raise InvalidOrderRequestError(str(exc)) from exc
+            return PricingQuote(...)
+        except HypertubeException as exc:
+            raise InvalidOrderRequestError(exc.message) from exc
         except Exception as exc:
-            raise PricingServiceUnavailableError("Pricing service unavailable.") from exc
+            raise PricingServiceUnavailableError("Pricing service is unavailable.") from exc
 ```
 
-> Schemat `except` wypełnić po zbadaniu wyjątków Graft.
+### Step 4: `pyproject.toml`
 
----
-
-### Krok 4: `pyproject.toml` — dodaj paczkę i custom index
+Custom registry returns HTML, not PEP 503 Simple API — `uv lock` cannot resolve it.
+Package documented as a manual install comment:
 
 ```toml
-[project]
 dependencies = [
     "fastapi>=0.115",
     "uvicorn[standard]>=0.34",
-    "graft-pypi-graftcode-homework==0.1.0",
+    # Install separately:
+    # uv pip install --extra-index-url https://grft.dev/simple/b4486228-d411-405d-a78c-e8521e198750__free \
+    #     graft-pypi-graftcode-homework==0.1.0
 ]
-
-[[tool.uv.index]]
-name = "graftcode"
-url = "https://grft.dev/simple/b4486228-d411-405d-a78c-e8521e198750__free"
-
-[tool.uv.sources]
-graft-pypi-graftcode-homework = { index = "graftcode" }
 ```
 
-### Krok 5: `settings.py` i `factory.py`
+### Step 5: `settings.py` and `factory.py`
 
-**`order_service/config/settings.py`:**
-- Usuń `graftcode_project_key` (należy do gg binary po stronie Pricing, nie Order Service)
-- Dodaj `graft_host: str | None`; odczytaj z `GRAFT_HOST` env var; wymagany gdy `PRICING_MODE=remote`
+`Settings` simplified to `pricing_mode` only. `GRAFT_HOST` is an adapter detail.
 
-```python
-@dataclass(frozen=True)
-class Settings:
-    pricing_mode: PricingMode
-    graft_host: str | None
-```
+`factory.py` creates `GraftPricingProvider()` directly — no `GraftConfig` import.
 
-**`order_service/bootstrap/factory.py`:**
+### Step 6: Tests
 
-```python
-from graft_pypi_graftcode_homework.graft.pypi.graftcode_homework.graft_config import GraftConfig
-from order_service.adapters.graft_pricing_provider import GraftPricingProvider
-
-def create_order_service_from_settings(settings: Settings) -> OrderService:
-    if settings.pricing_mode == PricingMode.REMOTE:
-        GraftConfig.host = settings.graft_host
-    return OrderService(pricing_provider=GraftPricingProvider())
-```
-
-Usuń `create_order_service(mode)`.
-
-### Krok 6: Testy
-
-**Usuń:**
-- `test_remote_mode.py` (testuje stub, zawsze ConnectionError)
+**Deleted:**
+- `test_remote_mode.py` (stub test, always ConnectionError)
 - `test_local_provider.py`
-- `tests/integration/` (używają LocalPricingProvider)
+- `tests/integration/` (used LocalPricingProvider)
 
-**Zaktualizuj:**
-- `test_factory.py` — patch `GraftConfig` i `GraftPricingProvider`
-- `test_settings.py` — usuń asercje `GRAFTCODE_PROJECT_KEY`, dodaj `GRAFT_HOST`
+**Updated:**
+- `test_factory.py` — patches `GraftPricingProvider`
+- `test_settings.py` — removed graft_host assertions
 
-**Nowy:**
-- `test_graft_provider.py` — mockuje `PricingServiceGraft`; pokrywa:
-  - mapowanie JSON → PricingQuote (Decimal z string)
-  - mapowanie wyjątków → `InvalidOrderRequestError` / `PricingServiceUnavailableError`
-
-**Bez zmian:**
-- `test_api.py`, `test_order_service.py`, `test_order_service_domain_errors.py`,
-  `test_order_service_extended.py`, `fakes/`
+**New:**
+- `test_graft_provider.py` — mocks `PricingServiceGraft`; covers:
+  - JSON → PricingQuote mapping (Decimal from string)
+  - Exception mapping → `InvalidOrderRequestError` / `PricingServiceUnavailableError`
 
 ---
 
 ## Milestone 5: Docker, Docker Compose, Makefile
 
-### `docker-compose.yml` (zastąp obecny)
+### `docker-compose.yml`
 
 ```yaml
 services:
@@ -270,16 +214,16 @@ services:
       - pricing-graft
 ```
 
-> `ws://pricing-graft/ws` — Docker internal DNS, port 80 gg gateway. Do weryfikacji przy `make run`.
+`ws://pricing-graft/ws` — Docker internal DNS, port 80 = gg gateway. Verify on first `make run`.
 
-### `pricing_service/Dockerfile` — popraw CMD
+### `pricing_service/Dockerfile` — fix CMD
 
-Obecna linia nie przekazuje project key — fix:
+Current line does not pass project key to `gg`:
 ```dockerfile
 CMD ["sh", "-c", "gg --projectKey \"$GRAFTCODE_PROJECT_KEY\" --modules ./pricing_service/graft/"]
 ```
 
-### `order_service/Dockerfile` — nowy plik
+### `order_service/Dockerfile`
 
 ```dockerfile
 FROM python:3.13-slim
@@ -290,10 +234,7 @@ EXPOSE 8000
 CMD ["uv", "run", "python", "-m", "order_service"]
 ```
 
-> `uv sync --no-dev` korzysta z `[[tool.uv.index]]` skonfigurowanego w `pyproject.toml`,
-> więc custom registry Graft jest dostępny bez dodatkowych flag.
-
-### `.env.example` — nowy plik
+### `.env.example`
 
 ```bash
 GRAFTCODE_PROJECT_KEY=your_project_key_here
@@ -315,44 +256,33 @@ run:
 
 ## Milestone 6: README & documentation
 
-Sekcje:
+Sections:
 
-1. **Quick start** — `make run`, wymagania (Docker, konto GraftCode, `.env`)
-2. **Setup** — gdzie wziąć i jak ustawić `GRAFTCODE_PROJECT_KEY`
-3. **Architektura** — diagram `OrderService → PricingProvider → GraftPricingProvider → gg → PricingService`;
-   dlaczego Graft zamiast REST między serwisami
-4. **Konfiguracja** — env vars: `PRICING_MODE`, `GRAFT_HOST`
-5. **Reguły cenowe** — strategy pattern, `PricingRulesEngine`, konfigurowalność, max discount cap 20%
-6. **Edge cases** — Decimal vs float, zaokrąglanie, quantity 0, nieznany customer type, brak produktu
-7. **Obsługa błędów** — taksonomia wyjątków, granica serwisów (order nie zna pricing exceptions)
-8. **Testowanie** — `make test`, curl, Vision UI pod `:81`
-9. **Known limitations**:
-   - Local mode (in-memory Graft) nie działa — bug Graft alpha; do weryfikacji po poprawce Graft
-   - Błędy domenowe przez Graft — zachowanie opisane po zbadaniu (Milestone 4, Krok 1)
-10. **Wersjonowanie / backward compatibility** — jak podchodzić do zmian sygnatur metod w Graft
+1. **Quick start** — `make run`, prerequisites (Docker, GraftCode account, `.env`)
+2. **Setup** — where to get and how to set `GRAFTCODE_PROJECT_KEY`
+3. **Architecture** — diagram `OrderService → PricingProvider → GraftPricingProvider → gg → PricingService`;
+   why Graft instead of REST between services
+4. **Configuration** — env vars: `PRICING_MODE`, `GRAFT_HOST`
+5. **Pricing rules** — strategy pattern, `PricingRulesEngine`, configurability, 20% discount cap
+6. **Edge cases** — Decimal vs float, quantity=0, unknown customer type, unknown product
+7. **Error handling** — exception taxonomy, service boundary (order service has no pricing exceptions)
+8. **Testing** — `make test`, curl, Vision UI at `:81`
+9. **Known limitations** — local mode broken (Graft alpha bug), domain error translation via HypertubeException
+10. **Versioning / backward compatibility** — how to handle Graft method signature changes
 
 ---
 
-## Known limitations do udokumentowania
-
-| Limitation | Wpływ |
-|---|---|
-| Local mode (in-memory Graft) nie działa | Tylko remote mode możliwy; `PRICING_MODE=local` nie ma zastosowania w Docker |
-| Graft exception propagation — zbadane w M4/Krok 1 | Error handling doprecyzowany po teście |
-
----
-
-## Weryfikacja (end-to-end po Milestone 5)
+## End-to-end verification (after Milestone 5)
 
 ```bash
-# Testy jednostkowe
+# Unit tests
 make test
 
-# Uruchomienie z Docker Compose
-cp .env.example .env  # wypełnij GRAFTCODE_PROJECT_KEY
+# Start via Docker Compose
+cp .env.example .env   # fill in GRAFTCODE_PROJECT_KEY
 make run
 
-# Test endpoint
+# Test the endpoint
 curl -X POST http://localhost:8000/orders \
   -H "Content-Type: application/json" \
   -d '{"product_id": "laptop", "quantity": 2, "customer_type": "premium"}'

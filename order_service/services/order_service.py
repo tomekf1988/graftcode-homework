@@ -4,18 +4,12 @@ from uuid import uuid4
 from order_service.contracts.order_result import OrderResult
 from order_service.domain.order import Order
 from order_service.domain.exceptions import (
-    OrderPlacementError,
-    PricingServiceUnavailableError,
     InvalidOrderRequestError,
     OrderNotFoundError,
+    OrderPlacementError,
+    PricingServiceUnavailableError,
 )
 from order_service.ports.pricing_provider import PricingProvider
-
-from pricing_service.domain.exceptions import (
-    ProductNotFoundError,
-    InvalidQuantityError,
-    UnsupportedCustomerTypeError,
-)
 
 logger = logging.getLogger(__name__)
 
@@ -54,14 +48,6 @@ class OrderService:
             raise OrderPlacementError(
                 "Unable to place order because pricing service is unavailable."
             ) from exc
-
-        except (
-            ProductNotFoundError,
-            InvalidQuantityError,
-            UnsupportedCustomerTypeError,
-        ) as exc:
-            logger.warning("Invalid order request: %s", exc)
-            raise InvalidOrderRequestError(str(exc)) from exc
 
         order = Order(
             order_id=str(uuid4()),

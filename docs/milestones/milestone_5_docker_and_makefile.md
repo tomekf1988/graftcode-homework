@@ -4,13 +4,13 @@
 
 ## Scope
 
-- `docker-compose.yml` — dwa serwisy: `pricing-graft` + `order`
-- `pricing_service/Dockerfile` — poprawka CMD (dodaj `--projectKey`)
-- `order_service/Dockerfile` — nowy plik
-- `.env.example` — dokumentacja zmiennych środowiskowych
-- `Makefile` — targety `test` i `run`
+- `docker-compose.yml` — two services: `pricing-graft` + `order`
+- `pricing_service/Dockerfile` — fix CMD to pass `--projectKey`
+- `order_service/Dockerfile` — new file
+- `.env.example` — env variable documentation
+- `Makefile` — `test` and `run` targets
 
-## Szczegóły
+## Details
 
 ### `docker-compose.yml`
 
@@ -40,17 +40,17 @@ services:
       - pricing-graft
 ```
 
-`GRAFT_HOST: ws://pricing-graft/ws` — Docker internal DNS; port 80 = gg WebSocket gateway.
-Do weryfikacji przy pierwszym `make run`.
+`GRAFT_HOST: ws://pricing-graft/ws` — Docker internal DNS; port 80 is the gg WebSocket gateway.
+To be verified on the first `make run`.
 
-### `pricing_service/Dockerfile` — poprawka CMD
+### `pricing_service/Dockerfile` — fix CMD
 
-Obecna linia nie przekazuje project key do `gg`:
+Current line does not pass the project key to `gg`:
 ```dockerfile
-# Przed:
+# Before:
 CMD ["gg","--modules","./pricing_service/graft/"]
 
-# Po:
+# After:
 CMD ["sh", "-c", "gg --projectKey \"$GRAFTCODE_PROJECT_KEY\" --modules ./pricing_service/graft/"]
 ```
 
@@ -65,8 +65,8 @@ EXPOSE 8000
 CMD ["uv", "run", "python", "-m", "order_service"]
 ```
 
-`uv sync --no-dev` korzysta z `[[tool.uv.index]]` w `pyproject.toml` (skonfigurowanego w M4),
-więc custom registry Graft jest dostępny automatycznie.
+`uv sync --no-dev` uses the custom Graft registry configured in `pyproject.toml`,
+so no extra flags are needed.
 
 ### `.env.example`
 
@@ -86,10 +86,10 @@ run:
 	docker compose up --build
 ```
 
-## Weryfikacja
+## Verification
 
 ```bash
-cp .env.example .env   # wypełnij GRAFTCODE_PROJECT_KEY
+cp .env.example .env   # fill in GRAFTCODE_PROJECT_KEY
 make run
 
 curl -X POST http://localhost:8000/orders \
@@ -100,6 +100,6 @@ curl -X POST http://localhost:8000/orders \
 open http://localhost:81
 ```
 
-## Details
+## See also
 
-See: `docs/plans/milestone_4_5_6_revised_plan.md` → Milestone 5.
+`docs/plans/milestone_4_5_6_revised_plan.md` → Milestone 5.

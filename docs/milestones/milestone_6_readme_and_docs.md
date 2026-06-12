@@ -4,23 +4,23 @@
 
 ## Scope
 
-Kompletny `README.md` spełniający wymagania zadania rekrutacyjnego.
+A complete `README.md` fulfilling the requirements of the recruitment task.
 
-## Sekcje README
+## README sections
 
 1. **Quick start**
-   - `make run` — uruchomienie całości przez Docker Compose
-   - `make test` — testy jednostkowe
-   - Wymagania: Docker, konto GraftCode, plik `.env`
+   - `make run` — start everything via Docker Compose
+   - `make test` — run unit tests
+   - Prerequisites: Docker, GraftCode account, `.env` file
 
 2. **Setup**
-   - Skąd wziąć `GRAFTCODE_PROJECT_KEY` (portal.graftcode.com)
-   - Jak skonfigurować `.env`
+   - Where to obtain `GRAFTCODE_PROJECT_KEY` (portal.graftcode.com)
+   - How to configure `.env`
 
-3. **Architektura**
+3. **Architecture**
    - Diagram:
      ```
-     Klient HTTP
+     HTTP client
        │ POST /orders
        ▼
      Order Service (FastAPI, :8000)
@@ -35,47 +35,47 @@ Kompletny `README.md` spełniający wymagania zadania rekrutacyjnego.
      PricingServiceGraft (server-side)
        │
        ▼
-     PricingService (logika domenowa)
+     PricingService (domain logic)
      ```
-   - Dlaczego Graft zamiast REST między serwisami
-   - LOCAL vs REMOTE mode — przełączanie przez konfigurację, bez zmian w logice
+   - Why Graft instead of REST between services
+   - LOCAL vs REMOTE mode — switched via config, no logic changes required
 
-4. **Konfiguracja**
-   - `PRICING_MODE` (local / remote)
-   - `GRAFT_HOST` (wymagane gdy remote, domyślnie `ws://localhost/ws`)
-   - `GRAFTCODE_PROJECT_KEY` (po stronie Pricing / gg)
+4. **Configuration**
+   - `PRICING_MODE` (`local` / `remote`)
+   - `GRAFT_HOST` (required in remote mode, defaults to `ws://localhost/ws`)
+   - `GRAFTCODE_PROJECT_KEY` (Pricing Service / gg side only)
 
-5. **Reguły cenowe**
-   - Strategy pattern: `PricingRule` Protocol + `PricingRulesEngine`
-   - Reguły: `PremiumCustomerRule` (10%), `BulkOrderRule` (5% gdy qty≥10), cap 20%
-   - Dodawanie nowych reguł bez zmiany silnika
+5. **Pricing rules**
+   - Strategy pattern: `PricingRule` protocol + `PricingRulesEngine`
+   - Rules: `PremiumCustomerRule` (10%), `BulkOrderRule` (5% when qty≥10), 20% cap
+   - New rules can be added without modifying the engine
 
 6. **Edge cases**
-   - `Decimal` zamiast `float` — precyzja finansowa
-   - Zaokrąglanie: brak — `Decimal` bez `round()`
+   - `Decimal` instead of `float` — financial precision
+   - No rounding — `Decimal` arithmetic without `round()`
    - `quantity=0` → `InvalidQuantityError` → HTTP 400
-   - Nieznany customer type → `UnsupportedCustomerTypeError` → HTTP 400
-   - Nieznany produkt → `ProductNotFoundError` → HTTP 400
+   - Unknown customer type → `UnsupportedCustomerTypeError` → HTTP 400
+   - Unknown product → `ProductNotFoundError` → HTTP 400
 
-7. **Obsługa błędów**
-   - Taksonomia: `InvalidOrderRequestError` (400) / `OrderPlacementError` (503)
-   - `order_service` nie zna typów z `pricing_service` — granica serwisów respektowana
+7. **Error handling**
+   - Taxonomy: `InvalidOrderRequestError` (400) / `OrderPlacementError` (503)
+   - `order_service` has no knowledge of `pricing_service` exception types — service boundary respected
    - `PricingServiceUnavailableError` → HTTP 503
 
-8. **Testowanie**
+8. **Testing**
    - `make test` — pytest
-   - `curl` — przykłady dla happy path i błędów
-   - Vision UI pod `:81` — testowanie Pricing Service przez interfejs Graft
+   - `curl` — examples for happy path and error cases
+   - Vision UI at `:81` — test Pricing Service via the Graft UI
 
 9. **Known limitations**
-   - Local mode (in-memory Graft) nie działa — bug Graft alpha
-   - Błędy domenowe przez Graft w remote mode: zachowanie opisane po weryfikacji (M4)
+   - Local mode (in-memory Graft) does not work — bug in Graft alpha
+   - Domain errors in remote mode: translated by `GraftPricingProvider` via `HypertubeException`
 
-10. **Wersjonowanie / backward compatibility**
-    - Jak podchodzić do zmian sygnatur metod w Graft
-    - Dodawanie pól: nowe pola opcjonalne nie łamią kompatybilności
-    - Zmiana sygnatur: nowa metoda obok starej; stara deprecatowana
+10. **Versioning / backward compatibility**
+    - How to handle method signature changes in Graft
+    - New optional fields do not break compatibility
+    - Signature changes: add new method alongside old; deprecate old
 
-## Details
+## See also
 
-See: `docs/plans/milestone_4_5_6_revised_plan.md` → Milestone 6.
+`docs/plans/milestone_4_5_6_revised_plan.md` → Milestone 6.

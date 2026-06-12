@@ -6,23 +6,20 @@ from order_service.api.error_handlers import (
     invalid_order_request_handler,
     order_not_found_handler,
     order_placement_handler,
-    pricing_service_unavailable_handler,
 )
 from order_service.api.routers.orders import router as orders_router
-from order_service.bootstrap.factory import create_order_service_from_settings
+from order_service.bootstrap.factory import create_order_service
 from order_service.config.settings import load_settings
 from order_service.domain.exceptions import (
     InvalidOrderRequestError,
     OrderNotFoundError,
     OrderPlacementError,
-    PricingServiceUnavailableError,
 )
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    settings = load_settings()
-    app.state.order_service = create_order_service_from_settings(settings)
+    app.state.order_service = create_order_service(load_settings())
     yield
 
 
@@ -32,7 +29,6 @@ def create_app() -> FastAPI:
     app.add_exception_handler(InvalidOrderRequestError, invalid_order_request_handler)
     app.add_exception_handler(OrderNotFoundError, order_not_found_handler)
     app.add_exception_handler(OrderPlacementError, order_placement_handler)
-    app.add_exception_handler(PricingServiceUnavailableError, pricing_service_unavailable_handler)
 
     app.include_router(orders_router)
 

@@ -10,15 +10,8 @@ from order_service.domain.exceptions import (
 from order_service.ports.pricing_provider import PricingProvider
 from order_service.services.order_service import OrderService
 
-from pricing_service.domain.exceptions import (
-    InvalidQuantityError,
-    ProductNotFoundError,
-    UnsupportedCustomerTypeError,
-)
-
 
 class _RaisingProvider(PricingProvider):
-    """Fake provider that raises a specified exception on calculate_price."""
 
     def __init__(self, exc: Exception):
         self._exc = exc
@@ -33,7 +26,6 @@ class _RaisingProvider(PricingProvider):
 
 
 class _SuccessProvider(PricingProvider):
-    """Fake provider that always returns a fixed quote."""
 
     def calculate_price(
         self,
@@ -50,34 +42,36 @@ class _SuccessProvider(PricingProvider):
         )
 
 
-def test_invalid_order_request_raised_for_unknown_product():
+def test_invalid_order_request_propagates():
     service = OrderService(
-        pricing_provider=_RaisingProvider(ProductNotFoundError("product not found")),
+        pricing_provider=_RaisingProvider(
+            InvalidOrderRequestError("Product 'ghost' not found.")
+        ),
     )
 
-    with pytest.raises(InvalidOrderRequestError, match="product not found"):
+    with pytest.raises(InvalidOrderRequestError, match="ghost"):
         service.place_order(product_id="ghost", quantity=1, customer_type="regular")
 
 
-def test_invalid_order_request_raised_for_invalid_quantity():
+def test_invalid_order_request_propagates_quantity_error():
     service = OrderService(
         pricing_provider=_RaisingProvider(
-            InvalidQuantityError("Quantity must be greater than zero.")
+            InvalidOrderRequestError("Quantity must be greater than zero.")
         ),
     )
 
-    with pytest.raises(InvalidOrderRequestError, match="Quantity must be greater than zero"):
+    with pytest.raises(InvalidOrderRequestError, match="Quantity"):
         service.place_order(product_id="laptop", quantity=0, customer_type="regular")
 
 
-def test_invalid_order_request_raised_for_unknown_customer_type():
+def test_invalid_order_request_propagates_customer_type_error():
     service = OrderService(
         pricing_provider=_RaisingProvider(
-            UnsupportedCustomerTypeError("Unsupported customer type: 'vip'")
+            InvalidOrderRequestError("Unsupported customer type: 'vip'.")
         ),
     )
 
-    with pytest.raises(InvalidOrderRequestError, match="Unsupported customer type"):
+    with pytest.raises(InvalidOrderRequestError, match="customer type"):
         service.place_order(product_id="laptop", quantity=1, customer_type="vip")
 
 

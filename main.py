@@ -1,27 +1,25 @@
-from order_service.bootstrap.factory import create_order_service_from_settings
+import os
+from pathlib import Path
+
+# Load .env for local development (no external dependency needed)
+_env = Path(__file__).parent / ".env"
+if _env.exists():
+    for _line in _env.read_text().splitlines():
+        _line = _line.strip()
+        if _line and not _line.startswith("#"):
+            _key, _, _val = _line.partition("=")
+            os.environ.setdefault(_key.strip(), _val.strip())
+
+from order_service.bootstrap.factory import create_order_service
 from order_service.config.settings import load_settings
 from order_service.domain.exceptions import InvalidOrderRequestError, OrderNotFoundError
-from graft_pypi_graftcode_homework.pricingservicegraft import PricingServiceGraft
-from graft_pypi_graftcode_homework.graft.pypi.graftcode_homework.graft_config import GraftConfig
 
-GraftConfig.host = "ws://localhost/ws"
-    
-service = PricingServiceGraft()
-result = service.calculate_price("laptop", 2, "premium")
-print(result)
-    
 
 def main() -> None:
-    GraftConfig.host = "ws://localhost/ws"
-    service = PricingServiceGraft()
-    result = service.calculate_price("laptop", 2, "premium")
-    print(result)
-    
-    return
     settings = load_settings()
-    service = create_order_service_from_settings(settings)
+    service = create_order_service(settings)
 
-    print(f"Running with pricing_mode={settings.pricing_mode.value}\n")
+    print(f"GRAFT_HOST={settings.graft_host}\n")
 
     # Scenario 1: Happy path
     print("--- Scenario: happy path ---")
@@ -32,7 +30,7 @@ def main() -> None:
     )
     print(result)
     happy_path_order_id = result.order_id
-
+    return 
     # Scenario 2: Product not found
     print("\n--- Scenario: product not found ---")
     try:

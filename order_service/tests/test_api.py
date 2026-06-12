@@ -1,37 +1,52 @@
 from decimal import Decimal
+from unittest.mock import patch
 
 import pytest
 from fastapi.testclient import TestClient
 
 from order_service.api.app import create_app
-from order_service.api.dependencies import get_order_service
-from order_service.bootstrap.factory import create_order_service
-from order_service.config.pricing_mode import PricingMode
-from order_service.domain.exceptions import PricingServiceUnavailableError
+from order_service.domain.exceptions import (
+    InvalidOrderRequestError,
+    PricingServiceUnavailableError,
+)
 from order_service.services.order_service import OrderService
+from order_service.tests.fakes.fake_pricing_provider import FakePricingProvider
+
+
+class InvalidRequestPricingProvider:
+    def calculate_price(self, product_id, quantity, customer_type):
+        raise InvalidOrderRequestError("bad request")
 
 
 class UnavailablePricingProvider:
-    def calculate_price(self, **_):
+    def calculate_price(self, product_id, quantity, customer_type):
         raise PricingServiceUnavailableError("pricing down")
+
+
+def _client_with(provider):
+    app = create_app()
+    fake_service = OrderService(provider)
+    with patch(
+        "order_service.api.app.create_order_service",
+        return_value=fake_service,
+    ):
+        with TestClient(app) as c:
+            yield c
 
 
 @pytest.fixture()
 def client():
-    app = create_app()
-    order_service = create_order_service(PricingMode.LOCAL)
-    app.dependency_overrides[get_order_service] = lambda: order_service
-    with TestClient(app) as c:
-        yield c
+    yield from _client_with(FakePricingProvider())
+
+
+@pytest.fixture()
+def invalid_client():
+    yield from _client_with(InvalidRequestPricingProvider())
 
 
 @pytest.fixture()
 def unavailable_client():
-    app = create_app()
-    unavailable = OrderService(UnavailablePricingProvider())
-    app.dependency_overrides[get_order_service] = lambda: unavailable
-    with TestClient(app) as c:
-        yield c
+    yield from _client_with(UnavailablePricingProvider())
 
 
 def test_place_order_success(client):
@@ -49,42 +64,10 @@ def test_place_order_success(client):
     assert Decimal(data["total_price"]) > 0
 
 
-def test_place_order_premium_discount(client):
-    regular = client.post(
-        "/orders",
-        json={"product_id": "laptop", "quantity": 1, "customer_type": "regular"},
-    )
-    premium = client.post(
-        "/orders",
-        json={"product_id": "laptop", "quantity": 1, "customer_type": "premium"},
-    )
-    assert regular.status_code == 201
-    assert premium.status_code == 201
-    assert Decimal(premium.json()["total_price"]) < Decimal(regular.json()["total_price"])
-
-
-def test_place_order_unknown_product_returns_400(client):
-    response = client.post(
+def test_place_order_returns_400_on_invalid_request(invalid_client):
+    response = invalid_client.post(
         "/orders",
         json={"product_id": "nonexistent", "quantity": 1, "customer_type": "regular"},
-    )
-    assert response.status_code == 400
-    assert "detail" in response.json()
-
-
-def test_place_order_invalid_quantity_returns_400(client):
-    response = client.post(
-        "/orders",
-        json={"product_id": "laptop", "quantity": 0, "customer_type": "regular"},
-    )
-    assert response.status_code == 400
-    assert "detail" in response.json()
-
-
-def test_place_order_unknown_customer_type_returns_400(client):
-    response = client.post(
-        "/orders",
-        json={"product_id": "laptop", "quantity": 1, "customer_type": "vip"},
     )
     assert response.status_code == 400
     assert "detail" in response.json()
@@ -122,14 +105,3 @@ def test_pricing_service_unavailable_returns_503(unavailable_client):
     )
     assert response.status_code == 503
     assert "detail" in response.json()
-
-
-def test_lifespan_wires_order_service(monkeypatch):
-    monkeypatch.setenv("PRICING_MODE", "local")
-    app = create_app()
-    with TestClient(app) as c:
-        response = c.post(
-            "/orders",
-            json={"product_id": "laptop", "quantity": 1, "customer_type": "regular"},
-        )
-    assert response.status_code == 201
