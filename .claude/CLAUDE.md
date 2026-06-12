@@ -30,7 +30,7 @@ Revised plan (M4–6): `docs/plans/milestone_4_5_6_revised_plan.md`
 | 3 | HTTP API on Order Service (FastAPI) | ✅ done |
 | 4 | GraftCode integration (architecture refactor) | ✅ done |
 | 5 | Docker, Docker Compose, Makefile | ✅ done |
-| 6 | README & documentation | pending |
+| 6 | README & documentation | ✅ done |
 
 ## Agents
 

@@ -1,3 +1,12 @@
+# DONE — Milestone 6
+
+- [x] Write `README.md` — 10 sections: quick start, setup, architecture, configuration, pricing rules, edge cases, error handling, testing, known limitations, versioning
+- [x] Update `.env.example` — add `GRAFTCODE_PROJECT_KEY`
+- [x] Update milestone status in `docs/milestones/milestone_6_readme_and_docs.md`
+- [x] Update CLAUDE.md milestone table
+
+---
+
 # DONE — Milestone 5
 
 - [x] Fix `pricing_service/Dockerfile` CMD — `gg --modules ./pricing_service/graft/` (no `--projectKey`)

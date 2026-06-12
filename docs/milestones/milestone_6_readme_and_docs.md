@@ -1,6 +1,6 @@
 # Milestone 6 — README & Documentation
 
-## Status: pending
+## Status: done
 
 ## Scope
 
