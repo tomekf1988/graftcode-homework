@@ -2,8 +2,8 @@ import json
 import logging
 from decimal import Decimal
 
-from graft_pypi_graftcode_homework.graft.pypi.graftcode_homework.graft_config import GraftConfig
-from graft_pypi_graftcode_homework.pricingservicegraft import PricingServiceGraft
+from graft_pypi_pricing_service_graft.graft.pypi.pricing_service_graft.graft_config import GraftConfig
+from graft_pypi_pricing_service_graft.pricingservicegraft import PricingServiceGraft
 from hypertube.utils.exception.HypertubeException import HypertubeException
 
 from order_service.contracts.pricing_quote import PricingQuote
