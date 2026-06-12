@@ -6,6 +6,7 @@ from pricing_service.domain.customer_type import CustomerType
 from pricing_service.domain.exceptions import (
     InvalidQuantityError,
     ProductNotFoundError,
+    UnsupportedCustomerTypeError,
 )
 from pricing_service.contracts.price_calculation_input import (
     PriceCalculationInput,
@@ -105,6 +106,19 @@ def test_should_raise_for_unknown_product(
                 product_id="unknown",
                 quantity=1,
                 customer_type=CustomerType.REGULAR,
+            )
+        )
+
+
+def test_should_raise_for_unsupported_customer_type(
+    pricing_service: PricingService,
+):
+    with pytest.raises(UnsupportedCustomerTypeError):
+        pricing_service.calculate_price(
+            PriceCalculationInput(
+                product_id="laptop",
+                quantity=1,
+                customer_type="vip",
             )
         )
 

@@ -1,9 +1,11 @@
 import logging
 from decimal import Decimal
 
+from pricing_service.domain.customer_type import CustomerType
 from pricing_service.domain.exceptions import (
     InvalidQuantityError,
     ProductNotFoundError,
+    UnsupportedCustomerTypeError,
 )
 from pricing_service.domain.pricing_rules import PricingRulesEngine
 from pricing_service.domain.product_catalog import ProductCatalog
@@ -34,6 +36,13 @@ class PricingService:
             request.quantity,
             request.customer_type,
         )
+
+        try:
+            CustomerType(request.customer_type)
+        except ValueError:
+            raise UnsupportedCustomerTypeError(
+                f"Unsupported customer type: '{request.customer_type}'."
+            )
 
         if request.quantity <= 0:
             raise InvalidQuantityError(
