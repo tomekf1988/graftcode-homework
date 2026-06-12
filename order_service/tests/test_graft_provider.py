@@ -1,6 +1,6 @@
 import json
 from decimal import Decimal
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -13,10 +13,8 @@ from order_service.domain.exceptions import (
 )
 
 
-def _make_provider(mock_client: MagicMock) -> GraftPricingProvider:
-    with patch("order_service.adapters.graft_pricing_provider.PricingServiceGraft", return_value=mock_client), \
-         patch("order_service.adapters.graft_pricing_provider.GraftConfig"):
-        return GraftPricingProvider()
+def _provider(mock_client: MagicMock) -> GraftPricingProvider:
+    return GraftPricingProvider(client=mock_client)
 
 
 def _price_json(**overrides) -> str:
@@ -34,7 +32,7 @@ def _price_json(**overrides) -> str:
 def test_maps_json_response_to_pricing_quote():
     client = MagicMock()
     client.calculate_price.return_value = _price_json()
-    provider = _make_provider(client)
+    provider = _provider(client)
 
     quote = provider.calculate_price("laptop", 2, "premium")
 
@@ -52,7 +50,7 @@ def test_hypertube_exception_raises_invalid_order_request():
         message="Product 'unknown' not found.",
         traceback_str="",
     )
-    provider = _make_provider(client)
+    provider = _provider(client)
 
     with pytest.raises(InvalidOrderRequestError, match="Product 'unknown' not found."):
         provider.calculate_price("unknown", 1, "regular")
@@ -61,7 +59,7 @@ def test_hypertube_exception_raises_invalid_order_request():
 def test_connection_error_raises_pricing_service_unavailable():
     client = MagicMock()
     client.calculate_price.side_effect = ConnectionError("gateway down")
-    provider = _make_provider(client)
+    provider = _provider(client)
 
     with pytest.raises(PricingServiceUnavailableError):
         provider.calculate_price("laptop", 1, "regular")
@@ -70,7 +68,7 @@ def test_connection_error_raises_pricing_service_unavailable():
 def test_generic_exception_raises_pricing_service_unavailable():
     client = MagicMock()
     client.calculate_price.side_effect = RuntimeError("unexpected")
-    provider = _make_provider(client)
+    provider = _provider(client)
 
     with pytest.raises(PricingServiceUnavailableError):
         provider.calculate_price("laptop", 1, "regular")

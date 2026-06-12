@@ -1,6 +1,5 @@
 import json
 import logging
-import os
 from decimal import Decimal
 
 from graft_pypi_graftcode_homework.graft.pypi.graftcode_homework.graft_config import GraftConfig
@@ -19,11 +18,10 @@ logger = logging.getLogger(__name__)
 
 class GraftPricingProvider(PricingProvider):
 
-    def __init__(self):
-        host = os.environ.get("GRAFT_HOST")
+    def __init__(self, host: str | None = None, client: PricingServiceGraft | None = None):
         if host:
             GraftConfig.host = host
-        self._client = PricingServiceGraft()
+        self._client = client or PricingServiceGraft()
 
     def calculate_price(
         self,

@@ -3,7 +3,7 @@ from order_service.config.settings import Settings
 from order_service.services.order_service import OrderService
 
 
-def create_order_service_from_settings(settings: Settings) -> OrderService:
+def create_order_service(settings: Settings) -> OrderService:
     return OrderService(
-        pricing_provider=GraftPricingProvider(),
+        pricing_provider=GraftPricingProvider(host=settings.graft_host),
     )

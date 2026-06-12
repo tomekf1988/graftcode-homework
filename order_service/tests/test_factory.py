@@ -1,7 +1,6 @@
 from unittest.mock import patch, MagicMock
 
-from order_service.bootstrap.factory import create_order_service_from_settings
-from order_service.config.pricing_mode import PricingMode
+from order_service.bootstrap.factory import create_order_service
 from order_service.config.settings import Settings
 from order_service.services.order_service import OrderService
 
@@ -10,17 +9,15 @@ from order_service.services.order_service import OrderService
 def test_returns_order_service_instance(mock_provider_cls):
     mock_provider_cls.return_value = MagicMock()
 
-    settings = Settings(pricing_mode=PricingMode.LOCAL)
-    service = create_order_service_from_settings(settings)
+    service = create_order_service(Settings(graft_host=None))
 
     assert isinstance(service, OrderService)
 
 
 @patch("order_service.bootstrap.factory.GraftPricingProvider")
-def test_creates_graft_provider_regardless_of_mode(mock_provider_cls):
+def test_passes_graft_host_to_provider(mock_provider_cls):
     mock_provider_cls.return_value = MagicMock()
 
-    for mode in PricingMode:
-        create_order_service_from_settings(Settings(pricing_mode=mode))
+    create_order_service(Settings(graft_host="ws://pricing/ws"))
 
-    assert mock_provider_cls.call_count == len(list(PricingMode))
+    mock_provider_cls.assert_called_once_with(host="ws://pricing/ws")

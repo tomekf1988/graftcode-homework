@@ -1,35 +1,17 @@
-import pytest
-
-from order_service.config.pricing_mode import PricingMode
 from order_service.config.settings import Settings, load_settings
 
 
-def test_defaults_to_local_mode(monkeypatch):
-    monkeypatch.delenv("PRICING_MODE", raising=False)
+def test_graft_host_read_from_env(monkeypatch):
+    monkeypatch.setenv("GRAFT_HOST", "ws://localhost/ws")
 
     settings = load_settings()
 
-    assert settings == Settings(pricing_mode=PricingMode.LOCAL)
+    assert settings == Settings(graft_host="ws://localhost/ws")
 
 
-def test_remote_mode(monkeypatch):
-    monkeypatch.setenv("PRICING_MODE", "remote")
-
-    settings = load_settings()
-
-    assert settings == Settings(pricing_mode=PricingMode.REMOTE)
-
-
-def test_invalid_pricing_mode_raises(monkeypatch):
-    monkeypatch.setenv("PRICING_MODE", "cloud")
-
-    with pytest.raises(ValueError, match="PRICING_MODE"):
-        load_settings()
-
-
-def test_pricing_mode_is_case_insensitive(monkeypatch):
-    monkeypatch.setenv("PRICING_MODE", "LOCAL")
+def test_graft_host_defaults_to_none(monkeypatch):
+    monkeypatch.delenv("GRAFT_HOST", raising=False)
 
     settings = load_settings()
 
-    assert settings.pricing_mode == PricingMode.LOCAL
+    assert settings == Settings(graft_host=None)

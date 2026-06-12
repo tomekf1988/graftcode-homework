@@ -27,7 +27,7 @@ def _client_with(provider):
     app = create_app()
     fake_service = OrderService(provider)
     with patch(
-        "order_service.api.app.create_order_service_from_settings",
+        "order_service.api.app.create_order_service",
         return_value=fake_service,
     ):
         with TestClient(app) as c:
