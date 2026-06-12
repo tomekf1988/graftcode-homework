@@ -1,8 +1,5 @@
+from order_service.domain.exceptions import InvalidOrderRequestError
 from order_service.ports.pricing_provider import PricingProvider
-
-from pricing_service.domain.exceptions import (
-    ProductNotFoundError,
-)
 
 
 class ProductNotFoundPricingProvider(PricingProvider):
@@ -13,6 +10,6 @@ class ProductNotFoundPricingProvider(PricingProvider):
         quantity: int,
         customer_type: str,
     ):
-        raise ProductNotFoundError(
-            f"Product {product_id} not found"
+        raise InvalidOrderRequestError(
+            f"Product '{product_id}' not found."
         )

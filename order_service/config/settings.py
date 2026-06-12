@@ -7,11 +7,6 @@ from order_service.config.pricing_mode import PricingMode
 @dataclass(frozen=True)
 class Settings:
     pricing_mode: PricingMode
-    # Validated at startup when PRICING_MODE=remote.
-    # RemotePricingProvider reads GRAFTCODE_PROJECT_KEY directly from the
-    # environment — it is not injected via this dataclass yet. Passing it
-    # through is deferred to the milestone that wires up the remote provider.
-    graftcode_project_key: str | None
 
 
 def load_settings() -> Settings:
@@ -25,14 +20,4 @@ def load_settings() -> Settings:
             f"Invalid PRICING_MODE={raw_mode!r}. Valid values are: {valid}"
         )
 
-    graftcode_project_key = os.environ.get("GRAFTCODE_PROJECT_KEY") or None
-
-    if pricing_mode == PricingMode.REMOTE and graftcode_project_key is None:
-        raise ValueError(
-            "GRAFTCODE_PROJECT_KEY must be set when PRICING_MODE=remote"
-        )
-
-    return Settings(
-        pricing_mode=pricing_mode,
-        graftcode_project_key=graftcode_project_key,
-    )
+    return Settings(pricing_mode=pricing_mode)
