@@ -1,9 +1,23 @@
 from order_service.bootstrap.factory import create_order_service_from_settings
 from order_service.config.settings import load_settings
 from order_service.domain.exceptions import InvalidOrderRequestError, OrderNotFoundError
+from graft_pypi_graftcode_homework.pricingservicegraft import PricingServiceGraft
+from graft_pypi_graftcode_homework.graft.pypi.graftcode_homework.graft_config import GraftConfig
 
+GraftConfig.host = "ws://localhost/ws"
+    
+service = PricingServiceGraft()
+result = service.calculate_price("laptop", 2, "premium")
+print(result)
+    
 
 def main() -> None:
+    GraftConfig.host = "ws://localhost/ws"
+    service = PricingServiceGraft()
+    result = service.calculate_price("laptop", 2, "premium")
+    print(result)
+    
+    return
     settings = load_settings()
     service = create_order_service_from_settings(settings)
 

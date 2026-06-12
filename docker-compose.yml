@@ -1,0 +1,11 @@
+services:
+  pricing-graft:
+    build:
+      context: .
+      dockerfile: pricing_service/Dockerfile
+
+    container_name: pricing-graft
+
+    ports:
+      - "80:80"
+      - "81:81"
