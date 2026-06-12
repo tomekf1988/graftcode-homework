@@ -10,10 +10,10 @@ RUN apt-get update \
  && dpkg -i /usr/app/gg.deb \
  && rm /usr/app/gg.deb \
  && apt-get clean \
- && rm -rf /var/lib/apt/lists/*
+ && rm -rf /var/lib/apt/lists/* \
+ && pip install --no-cache-dir pytest
 
 EXPOSE 80
 EXPOSE 81
 
-CMD ["gg","--modules","./pricing_service/graft/"]
-# CMD ["sh", "-c", "gg --projectKey \"$PROJECT_KEY\" --modules ./energy-service/"]
+CMD ["gg", "--modules", "./pricing_service/graft/"]

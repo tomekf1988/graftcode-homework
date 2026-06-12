@@ -29,7 +29,7 @@ Revised plan (M4–6): `docs/plans/milestone_4_5_6_revised_plan.md`
 | 2 | Configuration (env vars) | ✅ done |
 | 3 | HTTP API on Order Service (FastAPI) | ✅ done |
 | 4 | GraftCode integration (architecture refactor) | ✅ done |
-| 5 | Docker, Docker Compose, Makefile | pending |
+| 5 | Docker, Docker Compose, Makefile | ✅ done |
 | 6 | README & documentation | pending |
 
 ## Agents
@@ -156,10 +156,37 @@ This is a reasonable heuristic for the alpha SDK where `exc.name` is not a clean
 
 ### Graft package not in `uv` lockfile
 The custom registry (`https://grft.dev/simple/…`) returns HTML, not a PEP 503 Simple API.
-`uv lock` cannot resolve it. The package must be installed manually:
-```
-uv pip install --extra-index-url https://grft.dev/simple/b4486228-d411-405d-a78c-e8521e198750__free \
-    graft-pypi-graftcode-homework==0.1.0
-```
-The install command is documented in `pyproject.toml` as a comment. Docker handles it
-via `RUN` in the Dockerfile (Milestone 5).
+`uv lock` cannot resolve it. The package (`graft-pypi-pricing-service-graft==0.1.0`) is
+installed separately via `make setup`. The registry URL and package name are documented in
+`order_service/pyproject.toml` via `[[tool.uv.index]]` + `[tool.uv.sources]` for reference.
+
+---
+
+## Architecture decisions (Milestone 5)
+
+### Only pricing-graft runs in Docker
+`gg` generates a new client package each time it analyzes the module on startup. Putting
+the order service in Docker would require reinstalling the graft package on every container
+rebuild, which breaks the `uv lock` workflow. Decision: `pricing-graft` runs in Docker;
+the order service runs locally via `uv run --project order_service`.
+
+### `pricing_service/graft/pyproject.toml` is required
+The `gg` GMA (module analyzer) reads `pyproject.toml` from the modules directory to extract
+`name`, `version`, and `requires-python`. Without it, `gg` fails with "No metadata source
+found". This file must exist in `pricing_service/graft/`.
+
+### `[[tool.uv.index]]` documents the graft registry
+`order_service/pyproject.toml` records the graft index URL and maps the package name to it
+via `[tool.uv.sources]`. This is documentation-only (uv cannot resolve it). `make setup`
+runs `uv pip install graft-pypi-pricing-service-graft==0.1.0` separately. When `gg`
+regenerates the package, only the URL in `[[tool.uv.index]]` and the version in `Makefile`
+need updating.
+
+### `pyproject.toml` and `uv.lock` live in `order_service/`
+There is only one Python package (order-service). Root-level project files were misleading.
+All uv commands use `--directory order_service` (for pytest, which needs CWD inside) or
+`--project order_service` (for `python -m order_service`, which needs CWD at repo root).
+
+### `GRAFT_HOST=ws://localhost/ws`
+The order service connects to pricing-graft on `localhost` port 80 (Docker maps 80:80).
+Docker internal DNS (`ws://pricing-graft/ws`) only works from inside another container.

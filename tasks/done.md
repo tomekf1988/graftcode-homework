@@ -1,3 +1,34 @@
+# DONE — Milestone 5
+
+- [x] Fix `pricing_service/Dockerfile` CMD — `gg --modules ./pricing_service/graft/` (no `--projectKey`)
+- [x] Create `pricing_service/graft/pyproject.toml` — required by `gg` GMA
+- [x] Update `docker-compose.yml` — only `pricing-graft` service (port 80/81), order service is local
+- [x] Move `pyproject.toml` and `uv.lock` from repo root to `order_service/`
+- [x] Add `[[tool.uv.index]]` + `[tool.uv.sources]` to document graft registry in `order_service/pyproject.toml`
+- [x] Update `.env.example` — `PRICING_MODE=remote`, `GRAFT_HOST=ws://localhost/ws`
+- [x] Create `Makefile` with `setup`, `test`, and `run` targets
+- [x] Update imports in `graft_pricing_provider.py` for new package `graft-pypi-pricing-service-graft`
+- [x] Delete `main.py`, root `pyproject.toml`, root `uv.lock`, `order_service/Dockerfile`
+- [x] All 21 tests pass (`make test`)
+
+---
+
+# DONE — Milestone 4
+
+- [x] Delete `order_service/adapters/local_pricing_provider.py` and `remote_pricing_provider.py`
+- [x] Create `order_service/adapters/graft_pricing_provider.py` — reads `GRAFT_HOST`, wraps `PricingServiceGraft`, translates `HypertubeException` → `InvalidOrderRequestError`
+- [x] Simplify `order_service/services/order_service.py` — no `pricing_service.*` imports
+- [x] Simplify `Settings` to `pricing_mode` only; `GRAFT_HOST` is adapter detail
+- [x] Update `factory.py` to create `GraftPricingProvider()` directly
+- [x] Update `pyproject.toml` — document graft manual install as comment
+- [x] Delete `test_remote_mode.py`, `test_local_provider.py`, `tests/integration/`
+- [x] Update `test_factory.py` to patch `GraftPricingProvider`
+- [x] Update `test_settings.py` — remove `graft_host` assertions
+- [x] Create `test_graft_provider.py` — JSON→PricingQuote mapping, exception translation
+- [x] All 29 tests pass (`uv run pytest -q`)
+
+---
+
 # DONE — Milestone 3
 
 - [x] Add `fastapi>=0.115` and `uvicorn[standard]>=0.34` to `pyproject.toml` (runtime)
