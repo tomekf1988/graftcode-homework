@@ -18,11 +18,18 @@ cp .env.example .env
 2. Install dependencies (first time only) and start both services:
 
 ```bash
-make setup
+make setup   # remote mode (Docker + WebSocket)
 make run
 ```
 
 `make run` starts the `pricing-graft` Docker container (ports 80 and 81) and then launches the Order Service locally on port 8000.
+
+**Local mode (no Docker):**
+
+```bash
+make setup-local          # installs deps + wires inmemory Graft
+PRICING_MODE=local uv run --project order_service python -m order_service
+```
 
 3. Run the test suite:
 
@@ -68,14 +75,32 @@ GraftCode generates a typed Python client (`PricingServiceGraft`) directly from 
 
 ### LOCAL vs REMOTE mode
 
-`PRICING_MODE` controls how the order service resolves prices. In `remote` mode (default) all calls go through the `gg` gateway over WebSocket. A `local` in-memory mode exists in configuration but does not work — see [Known limitations](#known-limitations).
+`PRICING_MODE` controls how the order service resolves prices.
+
+- **`remote`** (default) — calls go through the `gg` gateway over WebSocket. Requires Docker (`make run`).
+- **`local`** — Graft inmemory mode: the pricing implementation runs in-process, no Docker or network needed. Requires `make setup-local`.
+
+In local mode `GraftConfig.host` stays at its default `"inmemory"`. Hypertube loads
+`pricing_service/graft/pricing_service_graft.py` via a symlink wired by `make setup-local`:
+
+```
+# pricingservicegraft.py (Graft-generated client) looks up:
+cls._ctx.get_type("graft.pricing_service_graft.PricingServiceGraft")
+
+# setup-local creates:
+graft.pricing_service_graft/
+  graft  →  pricing_service/graft/    ← symlink so import graft.pricing_service_graft resolves
+```
+
+`pricing_service.*` imports work because the repo root is in `sys.path` when the
+order service is launched from the repo root via `uv run`.
 
 ## Configuration
 
 | Variable | Default | Description |
 |---|---|---|
-| `GRAFT_HOST` | `ws://localhost/ws` | WebSocket address of the `gg` gateway |
-| `PRICING_MODE` | `remote` | `remote` — use `gg` gateway; `local` — broken, see limitations |
+| `PRICING_MODE` | `remote` | `remote` — WebSocket via `gg` gateway; `local` — Graft inmemory (no Docker) |
+| `GRAFT_HOST` | `ws://localhost/ws` | WebSocket address of the `gg` gateway (remote mode only) |
 | `GRAFTCODE_PROJECT_KEY` | — | Optional. Required only when connecting to a hosted GraftCode environment. |
 
 ## Pricing rules
@@ -158,8 +183,6 @@ Open `http://localhost:81` to test the Pricing Service directly via the GraftCod
 ## Known limitations
 
 - **Order Service is not exposed through Vision.** The task requires the Order Service to be accessible via Graftcode Vision so `place_order` can be tested visually. In this solution, only the Pricing Service is exposed through Vision (at `:81`). The Order Service is a plain FastAPI server tested via HTTP (`curl` or any HTTP client). Exposing the Order Service through a second `gg` gateway instance would require wiring a separate Graft module for it.
-
-- **Local mode is broken.** The in-memory Graft transport (no `GRAFT_HOST`) does not work due to a bug in Graft alpha. Only `remote` mode (via the `gg` gateway) is functional. The `PRICING_MODE` config key and `PricingProvider` protocol are in place so the switch would be a one-line config change once the alpha bug is fixed.
 
 - **Domain error discrimination.** All domain errors from the Pricing Service arrive as `HypertubeException`. `GraftPricingProvider` maps them uniformly to `InvalidOrderRequestError`. Discriminating between specific error types (e.g. unknown product vs bad quantity) is not currently possible with the Graft alpha SDK.
 
