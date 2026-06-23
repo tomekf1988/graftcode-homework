@@ -31,6 +31,7 @@ Revised plan (M4–6): `docs/plans/milestone_4_5_6_revised_plan.md`
 | 4 | GraftCode integration (architecture refactor) | ✅ done |
 | 5 | Docker, Docker Compose, Makefile | ✅ done |
 | 6 | README & documentation | ✅ done |
+| 7 | GraftCode local (inmemory) mode | ✅ done |
 
 ## Agents
 
@@ -190,3 +191,41 @@ All uv commands use `--directory order_service` (for pytest, which needs CWD ins
 ### `GRAFT_HOST=ws://localhost/ws`
 The order service connects to pricing-graft on `localhost` port 80 (Docker maps 80:80).
 Docker internal DNS (`ws://pricing-graft/ws`) only works from inside another container.
+
+---
+
+## Architecture decisions (Milestone 7)
+
+### `pricing_mode` in `Settings`, not just `graft_host`
+`Settings` now has `pricing_mode: str` (`"remote"` | `"local"`). The factory uses it to
+decide whether to pass `host` to `GraftPricingProvider`. `PRICING_MODE` is normalised to
+lowercase at load time. Default is `"remote"` to preserve backward compatibility.
+
+### Symlink, not copy, for inmemory module
+`make setup-local` creates one symlink inside the Graft-installed package:
+```
+graft.pricing_service_graft/graft  →  pricing_service/graft/
+```
+This makes `import graft.pricing_service_graft` resolve correctly because hypertube adds
+`graft.pricing_service_graft/` to `sys.path` and the symlinked `graft/` directory contains
+`pricing_service_graft.py`. A copy would drift; the symlink stays in sync.
+
+### Why this specific symlink target
+`pricingservicegraft.py` (generated client) calls:
+```python
+cls._ctx.get_type("graft.pricing_service_graft.PricingServiceGraft")
+```
+Hypertube resolves types by Python import path. Without `graft/pricing_service_graft.py`
+accessible as `graft.pricing_service_graft`, the type lookup fails with
+`No module named 'graft'`. The symlink is the minimal intervention that satisfies this
+lookup without modifying the generated client.
+
+### `pricing_service.*` via CWD, not symlink
+`pricing_service_graft.py` imports `pricing_service.bootstrap.factory` etc. These resolve
+because the repo root is in `sys.path` (Python adds CWD when launching with `-m`). No
+additional symlink or copy of `pricing_service/` is needed.
+
+### `uv pip install` fix: explicit `--python` flag
+`uv sync --directory order_service` correctly uses `order_service/.venv`, but the
+subsequent `uv pip install` was incorrectly using the root `.venv` when `VIRTUAL_ENV` was
+set. Fixed by using `VIRTUAL_ENV="" uv pip install --python order_service/.venv/bin/python`.
