@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 class GraftPricingProvider(PricingProvider):
 
     def __init__(self, host: str | None = None, client: PricingServiceGraft | None = None):
-        if host:
+        if host is not None:
             GraftConfig.host = host
         self._client = client or PricingServiceGraft()
 

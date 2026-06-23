@@ -1,6 +1,6 @@
 .PHONY: setup setup-local test run
 
-PYTHON_VERSION   := 3.13
+PYTHON_VERSION   := $(shell order_service/.venv/bin/python3 -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')" 2>/dev/null || echo "3.13")
 SITE_PACKAGES    := order_service/.venv/lib/python$(PYTHON_VERSION)/site-packages
 GRAFT_PKG_DIR    := $(SITE_PACKAGES)/graft_pypi_pricing_service_graft
 GRAFT_MODULE_DIR := $(GRAFT_PKG_DIR)/graft.pricing_service_graft

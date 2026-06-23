@@ -1,3 +1,5 @@
+import pytest
+
 from order_service.config.settings import Settings, load_settings
 
 
@@ -35,3 +37,10 @@ def test_pricing_mode_normalised_to_lowercase(monkeypatch):
     settings = load_settings()
 
     assert settings.pricing_mode == "local"
+
+
+def test_invalid_pricing_mode_raises(monkeypatch):
+    monkeypatch.setenv("PRICING_MODE", "cloud")
+
+    with pytest.raises(ValueError, match="Invalid PRICING_MODE"):
+        load_settings()
