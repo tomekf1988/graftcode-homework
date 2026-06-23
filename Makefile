@@ -1,4 +1,4 @@
-.PHONY: setup setup-local test run
+.PHONY: setup setup-local test run run-local
 
 PYTHON_VERSION   := $(shell order_service/.venv/bin/python3 -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')" 2>/dev/null || echo "3.13")
 SITE_PACKAGES    := order_service/.venv/lib/python$(PYTHON_VERSION)/site-packages
@@ -21,4 +21,6 @@ test:
 
 run:
 	docker compose up -d
-	set -a; . ./.env; set +a; uv run --project order_service python -m order_service
+
+run-local:
+	PRICING_MODE=local gg --modules ./order_service/graft/

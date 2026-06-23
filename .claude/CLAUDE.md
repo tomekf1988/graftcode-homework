@@ -32,6 +32,7 @@ Revised plan (M4–6): `docs/plans/milestone_4_5_6_revised_plan.md`
 | 5 | Docker, Docker Compose, Makefile | ✅ done |
 | 6 | README & documentation | ✅ done |
 | 7 | GraftCode local (inmemory) mode | ✅ done |
+| 8 | Order Service przez Vision (remote mode) | 🔄 planned |
 
 ## Agents
 

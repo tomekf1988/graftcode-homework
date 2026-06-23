@@ -2,8 +2,22 @@ services:
   pricing-graft:
     build:
       context: .
-      dockerfile: pricing_service/Dockerfile
+      dockerfile: pricing_service/graft/Dockerfile
     container_name: pricing-graft
     ports:
       - "80:80"
       - "81:81"
+
+  order-graft:
+    build:
+      context: .
+      dockerfile: order_service/graft/Dockerfile
+    container_name: order-graft
+    ports:
+      - "82:80"
+      - "83:81"
+    environment:
+      PRICING_MODE: remote
+      GRAFT_HOST: ws://pricing-graft/ws
+    depends_on:
+      - pricing-graft
