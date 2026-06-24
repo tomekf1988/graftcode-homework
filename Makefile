@@ -20,7 +20,8 @@ test-inmemory:
 
 run:
 	docker compose build order-graft
-	docker compose up -d --no-recreate
+	docker compose up -d --no-recreate pricing-graft
+	docker compose up -d --force-recreate order-graft
 
 run-only-pricing:
 	docker compose up -d pricing-graft
