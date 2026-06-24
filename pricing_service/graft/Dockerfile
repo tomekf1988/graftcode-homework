@@ -10,8 +10,7 @@ RUN apt-get update \
  && dpkg -i /usr/app/gg.deb \
  && rm /usr/app/gg.deb \
  && apt-get clean \
- && rm -rf /var/lib/apt/lists/* \
- && pip install --no-cache-dir pytest
+ && rm -rf /var/lib/apt/lists/*
 
 EXPOSE 80
 EXPOSE 81
