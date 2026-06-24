@@ -23,8 +23,7 @@ run:
 	docker compose up -d --no-recreate
 
 run-only-pricing:
-	-docker compose stop order-graft
-	docker compose -f docker-compose.yml -f docker-compose.pricing-only.yml up -d pricing-graft
+	docker compose up -d pricing-graft
 	@echo ""
 	@echo "Waiting for gg to initialize..."
 	@sleep 8

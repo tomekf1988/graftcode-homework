@@ -1,5 +1,0 @@
-services:
-  pricing-graft:
-    ports:
-      - "80:80"
-      - "81:81"
