@@ -18,5 +18,17 @@ class InvalidOrderRequestError(OrderError):
     pass
 
 
+class ProductNotFoundError(InvalidOrderRequestError):
+    pass
+
+
+class InvalidQuantityError(InvalidOrderRequestError):
+    pass
+
+
+class UnsupportedCustomerTypeError(InvalidOrderRequestError):
+    pass
+
+
 class OrderNotFoundError(OrderError):
     pass

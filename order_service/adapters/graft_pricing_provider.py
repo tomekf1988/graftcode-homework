@@ -9,11 +9,20 @@ from hypertube.utils.exception.HypertubeException import HypertubeException
 from order_service.contracts.pricing_quote import PricingQuote
 from order_service.domain.exceptions import (
     InvalidOrderRequestError,
+    InvalidQuantityError,
+    ProductNotFoundError,
     PricingServiceUnavailableError,
+    UnsupportedCustomerTypeError,
 )
 from order_service.ports.pricing_provider import PricingProvider
 
 logger = logging.getLogger(__name__)
+
+_DOMAIN_EXCEPTION_MAP: dict[str, type[InvalidOrderRequestError]] = {
+    "ProductNotFoundError": ProductNotFoundError,
+    "InvalidQuantityError": InvalidQuantityError,
+    "UnsupportedCustomerTypeError": UnsupportedCustomerTypeError,
+}
 
 
 class GraftPricingProvider(PricingProvider):
@@ -46,8 +55,9 @@ class GraftPricingProvider(PricingProvider):
             )
 
         except HypertubeException as exc:
+            exc_class = _DOMAIN_EXCEPTION_MAP.get(exc.name, InvalidOrderRequestError)
             logger.warning("Pricing domain error: %s", exc.message)
-            raise InvalidOrderRequestError(exc.message) from exc
+            raise exc_class(exc.message) from exc
 
         except Exception as exc:
             logger.error("Pricing service unavailable: %s", exc)
