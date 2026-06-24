@@ -5,9 +5,12 @@ from order_service.bootstrap.factory import create_order_service
 from order_service.config.settings import load_settings
 from order_service.domain.exceptions import (
     InvalidOrderRequestError,
+    InvalidQuantityError,  # noqa: F401 — imported so gg registers the type on module scan
     OrderNotFoundError,
     OrderPlacementError,
     PricingServiceUnavailableError,
+    ProductNotFoundError,  # noqa: F401 — imported so gg registers the type on module scan
+    UnsupportedCustomerTypeError,  # noqa: F401 — imported so gg registers the type on module scan
 )
 
 logger = logging.getLogger(__name__)
