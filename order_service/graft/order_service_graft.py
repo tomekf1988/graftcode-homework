@@ -5,12 +5,12 @@ from order_service.bootstrap.factory import create_order_service
 from order_service.config.settings import load_settings
 from order_service.domain.exceptions import (
     InvalidOrderRequestError,
-    InvalidQuantityError,  # noqa: F401 — imported so gg registers the type on module scan
+    InvalidQuantityError,
     OrderNotFoundError,
     OrderPlacementError,
     PricingServiceUnavailableError,
-    ProductNotFoundError,  # noqa: F401 — imported so gg registers the type on module scan
-    UnsupportedCustomerTypeError,  # noqa: F401 — imported so gg registers the type on module scan
+    ProductNotFoundError,
+    UnsupportedCustomerTypeError,
 )
 
 logger = logging.getLogger(__name__)
@@ -40,6 +40,9 @@ class OrderServiceGraft:
                 quantity=quantity,
                 customer_type=customer_type,
             )
+        except (ProductNotFoundError, InvalidQuantityError, UnsupportedCustomerTypeError) as e:
+            logger.warning("Invalid order request: %s", e)
+            raise
         except InvalidOrderRequestError as e:
             logger.warning("Invalid order request: %s", e)
             raise
