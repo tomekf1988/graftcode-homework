@@ -15,11 +15,15 @@ logger = logging.getLogger(__name__)
 
 class OrderServiceGraft:
 
-    def __init__(self, _service=None):
-        if _service is None:
-            settings = load_settings()
-            _service = create_order_service(settings)
-        self._service = _service
+    def __init__(self):
+        settings = load_settings()
+        self._service = create_order_service(settings)
+
+    @classmethod
+    def _create_with_service(cls, service):
+        instance = cls.__new__(cls)
+        instance._service = service
+        return instance
 
     def place_order(
         self,

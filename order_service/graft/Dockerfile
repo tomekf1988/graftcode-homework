@@ -4,6 +4,10 @@ WORKDIR /usr/app
 
 COPY . /usr/app
 
+# NOTE: The GUID in this URL is tied to the running gg instance and changes on every restart.
+# After restarting pricing-graft, update GRAFT_REGISTRY_URL in .env before rebuilding with --no-cache.
+ARG GRAFT_REGISTRY_URL=https://grft.dev/simple/f812a82c-cdeb-4928-bf7e-c9e6e222e5c2__free
+
 RUN apt-get update \
  && apt-get install -y wget \
  && wget -O /usr/app/gg.deb https://github.com/grft-dev/graftcode-gateway/releases/latest/download/gg_linux_arm64.deb \
@@ -11,10 +15,8 @@ RUN apt-get update \
  && rm /usr/app/gg.deb \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/* \
- # NOTE: The GUID in this URL is tied to the running gg instance and changes on every restart.
- # After restarting pricing-graft, update this URL from `make setup` output before rebuilding with --no-cache.
  && pip install --no-cache-dir \
-      --extra-index-url https://grft.dev/simple/f812a82c-cdeb-4928-bf7e-c9e6e222e5c2__free \
+      --extra-index-url ${GRAFT_REGISTRY_URL} \
       graft-pypi-pricing-service-graft==0.1.0
 
 EXPOSE 80
