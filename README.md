@@ -31,33 +31,25 @@ order-graft container  (ports 80, 81)
             └── PricingService  (domain logic)
 ```
 
-## Local development setup
+## Rebuilding after pricing-graft restart
 
-Run this once to install dependencies for `make test`:
-
-```bash
-make setup
-```
-
-`make setup` needs the pricing-graft client package, which is published to an ephemeral registry tied to the running `gg` instance. If the registry URL has changed (e.g. after restarting containers), refresh it first:
+The client package registry URL is ephemeral — it changes every time pricing-graft restarts.
+Docker layer cache normally masks this, but a fresh `--no-cache` build requires an updated URL.
 
 ```bash
-# 1. Start only pricing-graft and get the current registry URL
+# 1. Start pricing-graft and print the current registry URL
 make run-only-pricing
-# → prints something like:
-#   https://grft.dev/simple/<guid>__free
+# → Registry URL: https://grft.dev/simple/<guid>__free
 
-# 2. Save it to .env
-echo "GRAFT_REGISTRY_URL=https://grft.dev/simple/<guid>__free" >> .env
+# 2. Update .env
+# GRAFT_REGISTRY_URL=https://grft.dev/simple/<guid>__free
 
-# 3. Install deps and start everything
-make setup
+# 3. Rebuild and start order-graft
 make run
 ```
 
-`GRAFT_REGISTRY_URL` is read from `.env` by both `make setup` (local pip install) and
-`docker compose build` (order-graft Dockerfile build arg). If not set, falls back to the
-last known working URL hardcoded as default.
+`GRAFT_REGISTRY_URL` from `.env` is passed as a Docker build arg to order-graft.
+If not set, falls back to the last known URL hardcoded as default in Makefile and Dockerfile.
 
 ## Configuration
 
@@ -73,7 +65,7 @@ last known working URL hardcoded as default.
 |---|---|
 | `make run` | Start both containers in background |
 | `make run-only-pricing` | Start only pricing-graft, print registry URL |
-| `make setup` | Install local deps (needed for `make test`) |
+| `make setup` | Install local deps — needed only for `make test` (not required for Docker) |
 | `make test` | Run unit tests |
 | `make test-inmemory` | Run inMemory graft client test inside order-graft container |
 
