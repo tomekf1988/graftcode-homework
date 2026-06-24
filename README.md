@@ -9,6 +9,22 @@ Two cooperating services exposed through Graftcode Vision:
 
 **Prerequisites:** Docker.
 
+**First run** (or after restarting pricing-graft):
+
+```bash
+# 1. Start pricing-graft and get the registry URL for the client package
+make run-only-pricing
+# → Registry URL: https://grft.dev/simple/<guid>__free
+
+# 2. Set it in .env
+# GRAFT_REGISTRY_URL=https://grft.dev/simple/<guid>__free
+
+# 3. Build order-graft with the new URL and start everything
+make run
+```
+
+**Subsequent runs** (pricing-graft not restarted, Docker layer cache intact):
+
 ```bash
 make run
 ```
