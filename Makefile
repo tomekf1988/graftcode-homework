@@ -1,4 +1,4 @@
-.PHONY: setup setup-local test run run-local
+.PHONY: setup setup-local test test-inmemory run run-local
 
 PYTHON_VERSION   := $(shell order_service/.venv/bin/python3 -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')" 2>/dev/null || echo "3.13")
 SITE_PACKAGES    := order_service/.venv/lib/python$(PYTHON_VERSION)/site-packages
@@ -18,6 +18,10 @@ setup-local: setup
 
 test:
 	uv run --directory order_service pytest -q
+
+test-inmemory:
+	docker cp test_inmemory.py order-graft:/usr/app/test_inmemory.py
+	docker exec order-graft python3 /usr/app/test_inmemory.py
 
 run:
 	docker compose up -d
