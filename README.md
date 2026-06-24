@@ -1,107 +1,81 @@
 # GraftCode Homework — Order & Pricing Services
 
-Two cooperating services:
+Two cooperating services exposed through Graftcode Vision:
 
-- **Order Service** — FastAPI HTTP API that accepts orders, calls pricing, and returns a priced result
-- **Pricing Service** — domain logic for calculating prices, exposed over WebSocket via the GraftCode `gg` gateway
+- **Order Service** — accepts orders, calls pricing, returns a priced result. Accessible via Vision at `localhost:81`.
+- **Pricing Service** — domain logic for calculating prices. Runs as an internal Docker service; called by Order Service over WebSocket.
 
 ## Quick start
 
 **Prerequisites:** Docker.
 
-1. Copy the example env file:
-
 ```bash
-cp .env.example .env
-```
-
-2. Install dependencies (first time only) and start both services:
-
-```bash
-make setup   # remote mode (Docker + WebSocket)
 make run
 ```
 
-`make run` starts the `pricing-graft` Docker container (ports 80 and 81) and then launches the Order Service locally on port 8000.
-
-**Local mode (no Docker):**
-
-```bash
-make setup-local          # installs deps + wires inmemory Graft
-PRICING_MODE=local uv run --project order_service python -m order_service
-```
-
-3. Run the test suite:
-
-```bash
-make test
-```
-
-## Setup
-
-### Configure `.env`
-
-```env
-PRICING_MODE=remote
-GRAFT_HOST=ws://localhost/ws
-```
-
-The `gg` gateway runs locally in Docker and does not require a GraftCode portal account for local development. If you connect to a hosted GraftCode environment, set `GRAFTCODE_PROJECT_KEY` in `.env` and pass it to the container via `docker-compose.yml`.
+Open Vision at **http://localhost:81** and call `place_order` or `get_order`.
 
 ## Architecture
 
 ```
-HTTP client
-  │  POST /orders
+Vision UI (localhost:81)
+  │  WebSocket  ws://localhost:80/ws
   ▼
-Order Service  (FastAPI, :8000)
-  │  PricingProvider protocol
-  ▼
-GraftPricingProvider  (adapter)
-  │  WebSocket  (GRAFT_HOST)
-  ▼
-gg Gateway  (:80)
-  │
-  ▼
-PricingServiceGraft  (server-side Graft module)
-  │
-  ▼
-PricingService  (domain logic)
+order-graft container  (ports 80, 81)
+  └── OrderServiceGraft
+      └── GraftPricingProvider
+            │  WebSocket  ws://pricing-graft/ws
+            ▼
+      pricing-graft container  (internal, no host ports)
+        └── PricingServiceGraft
+            └── PricingService  (domain logic)
 ```
 
-### Why Graft instead of REST between services?
+## Local development setup
 
-GraftCode generates a typed Python client (`PricingServiceGraft`) directly from the server-side Python method signature. No OpenAPI spec, no manual schema maintenance — the contract is the method. The `gg` gateway handles WebSocket framing, serialisation, and routing transparently. Adding a new pricing method requires only regenerating the client package.
+Run this once to install dependencies for `make test`:
 
-### LOCAL vs REMOTE mode
-
-`PRICING_MODE` controls how the order service resolves prices.
-
-- **`remote`** (default) — calls go through the `gg` gateway over WebSocket. Requires Docker (`make run`).
-- **`local`** — Graft inmemory mode: the pricing implementation runs in-process, no Docker or network needed. Requires `make setup-local`.
-
-In local mode `GraftConfig.host` stays at its default `"inmemory"`. Hypertube loads
-`pricing_service/graft/pricing_service_graft.py` via a symlink wired by `make setup-local`:
-
-```
-# pricingservicegraft.py (Graft-generated client) looks up:
-cls._ctx.get_type("graft.pricing_service_graft.PricingServiceGraft")
-
-# setup-local creates:
-graft.pricing_service_graft/
-  graft  →  pricing_service/graft/    ← symlink so import graft.pricing_service_graft resolves
+```bash
+make setup
 ```
 
-`pricing_service.*` imports work because the repo root is in `sys.path` when the
-order service is launched from the repo root via `uv run`.
+`make setup` needs the pricing-graft client package, which is published to an ephemeral registry tied to the running `gg` instance. If the registry URL has changed (e.g. after restarting containers), refresh it first:
+
+```bash
+# 1. Start only pricing-graft and get the current registry URL
+make run-only-pricing
+# → prints something like:
+#   https://grft.dev/simple/<guid>__free
+
+# 2. Save it to .env
+echo "GRAFT_REGISTRY_URL=https://grft.dev/simple/<guid>__free" >> .env
+
+# 3. Install deps and start everything
+make setup
+make run
+```
+
+`GRAFT_REGISTRY_URL` is read from `.env` by both `make setup` (local pip install) and
+`docker compose build` (order-graft Dockerfile build arg). If not set, falls back to the
+last known working URL hardcoded as default.
 
 ## Configuration
 
 | Variable | Default | Description |
 |---|---|---|
-| `PRICING_MODE` | `remote` | `remote` — WebSocket via `gg` gateway; `local` — Graft inmemory (no Docker) |
-| `GRAFT_HOST` | `ws://localhost/ws` | WebSocket address of the `gg` gateway (remote mode only) |
-| `GRAFTCODE_PROJECT_KEY` | — | Optional. Required only when connecting to a hosted GraftCode environment. |
+| `PRICING_MODE` | `remote` | `remote` — WebSocket via gg; `local` — Graft inmemory (outside Docker only) |
+| `GRAFT_HOST` | `ws://pricing-graft/ws` | WebSocket address of pricing-graft (Docker internal DNS) |
+| `GRAFT_REGISTRY_URL` | *(hardcoded fallback)* | pip index URL for `graft-pypi-pricing-service-graft`. Ephemeral — tied to the running gg instance GUID. |
+
+## Makefile targets
+
+| Target | Description |
+|---|---|
+| `make run` | Start both containers in background |
+| `make run-only-pricing` | Start only pricing-graft, print registry URL |
+| `make setup` | Install local deps (needed for `make test`) |
+| `make test` | Run unit tests |
+| `make test-inmemory` | Run inMemory graft client test inside order-graft container |
 
 ## Pricing rules
 
@@ -115,81 +89,51 @@ The Pricing Service uses the **Strategy pattern** to apply discounts:
 | `PremiumCustomerRule` | `customer_type == premium` | 10% |
 | `BulkOrderRule` | `quantity >= 10` | 5% |
 
-Adding a new rule requires only implementing `PricingRule` and registering it in the engine — no changes to `PricingRulesEngine`.
-
 **Available products:** `laptop` (5000), `mouse` (150), `keyboard` (300)
+
+**Valid customer types:** `regular`, `premium`
 
 ## Edge cases
 
-- **Financial precision** — all prices use `Decimal`, never `float`. No rounding is applied.
-- **`quantity = 0`** — raises `InvalidQuantityError` → HTTP 400
-- **Unknown customer type** — raises `UnsupportedCustomerTypeError` → HTTP 400
-- **Unknown product** — raises `ProductNotFoundError` → HTTP 400
+- **Financial precision** — all prices use `Decimal`, never `float`.
+- **`quantity = 0`** — raises `InvalidQuantityError`
+- **Unknown customer type** — raises `UnsupportedCustomerTypeError`
+- **Unknown product** — raises `ProductNotFoundError`
 
 ## Error handling
 
 ```
 order_service.domain.exceptions
   └── OrderError  (base)
-      ├── InvalidOrderRequestError        → HTTP 400  (bad product / quantity / customer type)
-      ├── PricingServiceUnavailableError  → HTTP 503  (gateway unreachable)
-      └── OrderPlacementError             → HTTP 503  (wraps unavailability)
+      ├── InvalidOrderRequestError       (bad product / quantity / customer type)
+      ├── PricingServiceUnavailableError (gateway unreachable)
+      └── OrderPlacementError            (wraps unavailability)
 ```
 
-**Service boundary:** `order_service` imports nothing from `pricing_service.*`. All exception translation happens inside `GraftPricingProvider`. `OrderService` only ever sees `order_service.domain.exceptions` types.
+**Service boundary:** `order_service` imports nothing from `pricing_service.*`. All exception
+translation happens inside `GraftPricingProvider`.
 
 ## Testing
 
-### Unit tests
-
 ```bash
-make test
+make test          # unit tests (no Docker needed)
+make test-inmemory # graft client test inside container (requires: make run)
 ```
-
-### Manual — curl
-
-Happy path:
-
-```bash
-curl -s -X POST http://localhost:8000/orders \
-  -H "Content-Type: application/json" \
-  -d '{"product_id": "laptop", "quantity": 2, "customer_type": "premium"}' \
-  | python3 -m json.tool
-```
-
-Error cases:
-
-```bash
-# Unknown product → 400
-curl -s -X POST http://localhost:8000/orders \
-  -H "Content-Type: application/json" \
-  -d '{"product_id": "unknown", "quantity": 1, "customer_type": "regular"}'
-
-# Zero quantity → 400
-curl -s -X POST http://localhost:8000/orders \
-  -H "Content-Type: application/json" \
-  -d '{"product_id": "laptop", "quantity": 0, "customer_type": "regular"}'
-
-# Unsupported customer type → 400
-curl -s -X POST http://localhost:8000/orders \
-  -H "Content-Type: application/json" \
-  -d '{"product_id": "laptop", "quantity": 1, "customer_type": "vip"}'
-```
-
-### Vision UI (GraftCode)
-
-Open `http://localhost:81` to test the Pricing Service directly via the GraftCode browser UI while `make run` is active.
 
 ## Known limitations
 
-- **Order Service is not exposed through Vision.** The task requires the Order Service to be accessible via Graftcode Vision so `place_order` can be tested visually. In this solution, only the Pricing Service is exposed through Vision (at `:81`). The Order Service is a plain FastAPI server tested via HTTP (`curl` or any HTTP client). Exposing the Order Service through a second `gg` gateway instance would require wiring a separate Graft module for it.
+- **Docker inMemory mode is broken.** `PRICING_MODE=local` inside a gg-hosted service triggers a nested hypertube initialization that crashes on any exception with `TypeError: HypertubeException.__init__() missing 2 required positional arguments`. Remote mode (WebSocket) works. See `docs/graftcode/bugs.md`.
 
-- **Domain error discrimination.** All domain errors from the Pricing Service arrive as `HypertubeException`. `GraftPricingProvider` maps them uniformly to `InvalidOrderRequestError`. Discriminating between specific error types (e.g. unknown product vs bad quantity) is not currently possible with the Graft alpha SDK.
+- **Vision WebSocket hardcoded to port 80.** Running two gg instances on the same host means only one Vision works. Order Service owns port 80/81; Pricing Service runs without host port mapping. See `docs/graftcode/bugs.md`.
 
-## Versioning and backward compatibility
+- **Ephemeral registry.** The `grft.dev/simple/<guid>__free` URL changes on every gg restart. Docker layer cache masks this; a fresh `--no-cache` build after restarting pricing-graft will fail until `GRAFT_REGISTRY_URL` is updated. See `docs/graftcode/bugs.md`.
+
+- **Domain error discrimination.** All domain errors from Pricing Service arrive as `HypertubeException`. `GraftPricingProvider` maps them uniformly to `InvalidOrderRequestError`.
+
+## Versioning
 
 The client package (`graft-pypi-pricing-service-graft`) is regenerated by `gg` on startup when the Pricing Service module changes.
 
-- **New optional parameters or return fields** — backward-compatible; existing clients continue to work.
-- **Renamed or removed parameters** — breaking change. Add a new method alongside the old one, regenerate the client, migrate callers, then remove the old method.
-- **Version pinning** — the package version is pinned in `Makefile` (`make setup`). Update only after verifying the new client against the running gateway.
+- **New optional parameters or return fields** — backward-compatible.
+- **Renamed or removed parameters** — breaking change. Add a new method, regenerate the client, migrate callers, remove the old method.
+- **Version pinning** — pinned in `Makefile`. Update only after verifying the new client against the running gateway.
