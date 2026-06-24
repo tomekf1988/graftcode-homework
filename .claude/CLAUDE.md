@@ -32,7 +32,7 @@ Revised plan (M4–6): `docs/plans/milestone_4_5_6_revised_plan.md`
 | 5 | Docker, Docker Compose, Makefile | ✅ done |
 | 6 | README & documentation | ✅ done |
 | 7 | GraftCode local (inmemory) mode | ✅ done |
-| 8 | Order Service przez Vision (remote mode) | 🔄 planned |
+| 8 | Order Service przez Vision (remote mode) | ✅ done |
 
 ## Agents
 
@@ -230,3 +230,37 @@ additional symlink or copy of `pricing_service/` is needed.
 `uv sync --directory order_service` correctly uses `order_service/.venv`, but the
 subsequent `uv pip install` was incorrectly using the root `.venv` when `VIRTUAL_ENV` was
 set. Fixed by using `VIRTUAL_ENV="" uv pip install --python order_service/.venv/bin/python`.
+
+---
+
+## Architecture decisions (Milestone 8)
+
+### order-graft on port 80/81, pricing-graft internal only
+Vision JS hardcodes WebSocket to `ws://localhost:80/ws`. Running order-graft on port
+82→80 caused Vision to silently talk to pricing-graft (port 80). Fix: order-graft owns
+port 80/81 (user-facing Vision), pricing-graft has no host port mapping — accessible
+only via Docker internal DNS (`ws://pricing-graft/ws`).
+
+### Docker inMemory mode is not supported (nested hypertube bug)
+When a gg-hosted service internally uses a graft client in `host=inMemory` mode, hypertube
+tries to initialize a second runtime context inside gg's existing Python runtime. Any
+exception causes `TypeError: HypertubeException.__init__() missing 2 required positional
+arguments: 'message' and 'traceback_str'`. Remote mode (WebSocket) works. InMemory mode
+works outside gg (direct python3 call). Docker always uses `PRICING_MODE=remote`.
+
+### Volume mount for GMA dir (testing aid)
+`docker-compose.yml` mounts `./pricing_service/graft` into the GMA module directory
+inside the container (`graft.pricing_service_graft/graft`). This makes `test_inmemory.py`
+work for direct container testing without `make setup-local`. It does not fix the nested
+hypertube bug — Docker inMemory mode via Vision remains broken.
+
+### `.env` controls PRICING_MODE and GRAFT_HOST
+`docker-compose.yml` uses `${PRICING_MODE:-remote}` and `${GRAFT_HOST:-ws://pricing-graft/ws}`.
+Switching modes requires only `.env` change, no code or compose file changes.
+Docker inMemory mode is not functional (nested hypertube bug) but the env var is wired.
+
+### Free-tier graft registry is ephemeral
+The install URL `https://grft.dev/simple/<guid>__free` contains the gg instance GUID which
+changes on every restart. The URL becomes 404 when gg stops. Docker builds succeed due to
+layer caching. A fresh `--no-cache` build after restarting pricing-graft will fail.
+The project key (`--projectKey`) provides a stable permanent URL — this is a paid feature.
