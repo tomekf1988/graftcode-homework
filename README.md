@@ -114,12 +114,20 @@ The Pricing Service uses the **Strategy pattern** to apply discounts:
 order_service.domain.exceptions
   └── OrderError  (base)
       ├── InvalidOrderRequestError       (bad product / quantity / customer type)
+      │   ├── ProductNotFoundError
+      │   ├── InvalidQuantityError
+      │   └── UnsupportedCustomerTypeError
       ├── PricingServiceUnavailableError (gateway unreachable)
-      └── OrderPlacementError            (wraps unavailability)
+      ├── OrderPlacementError            (wraps unavailability)
+      └── OrderNotFoundError
 ```
+
+`GraftPricingProvider` maps `HypertubeException.name` to the specific subtype (`ProductNotFoundError` etc.). Unknown names fall back to `InvalidOrderRequestError`.
 
 **Service boundary:** `order_service` imports nothing from `pricing_service.*`. All exception
 translation happens inside `GraftPricingProvider`.
+
+**Vision display:** gg alpha reports the base class name (`InvalidOrderRequestError`) in Vision regardless of the actual subtype. The correct type and message are visible in container logs.
 
 ## Testing
 
@@ -136,7 +144,7 @@ make test-inmemory # graft client test inside container (requires: make run)
 
 - **Ephemeral registry.** The `grft.dev/simple/<guid>__free` URL changes on every gg restart. Docker layer cache masks this; a fresh `--no-cache` build after restarting pricing-graft will fail until `GRAFT_REGISTRY_URL` is updated. See `docs/graftcode/bugs.md`.
 
-- **Domain error discrimination.** All domain errors from Pricing Service arrive as `HypertubeException`. `GraftPricingProvider` maps them uniformly to `InvalidOrderRequestError`.
+- **Vision displays base exception class.** gg alpha reports `InvalidOrderRequestError` in Vision even when the actual raised type is `ProductNotFoundError`, `InvalidQuantityError`, or `UnsupportedCustomerTypeError`. The Python type is correct — only the Vision UI label is wrong.
 
 ## Versioning
 
