@@ -19,7 +19,8 @@ test-inmemory:
 	docker exec order-graft python3 /usr/app/test_inmemory.py
 
 run:
-	docker compose up --build -d
+	docker compose build order-graft
+	docker compose up -d --no-recreate
 
 run-only-pricing:
 	-docker compose stop order-graft
