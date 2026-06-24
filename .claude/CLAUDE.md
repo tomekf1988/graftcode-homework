@@ -263,4 +263,4 @@ Docker inMemory mode is not functional (nested hypertube bug) but the env var is
 The install URL `https://grft.dev/simple/<guid>__free` contains the gg instance GUID which
 changes on every restart. The URL becomes 404 when gg stops. Docker builds succeed due to
 layer caching. A fresh `--no-cache` build after restarting pricing-graft will fail.
-The project key (`--projectKey`) provides a stable permanent URL — this is a paid feature.
+A fresh `--no-cache` build after restarting pricing-graft requires updating the URL in Makefile/Dockerfile.

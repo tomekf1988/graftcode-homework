@@ -66,5 +66,3 @@ The GUID changes on every gg restart. The registry URL becomes a 404 when the gg
 - `uv lock` cannot resolve the dependency at all
 
 **Workaround**: Use `pip install` (not `uv`) during setup, and run it while gg is active. Document the URL in Makefile/Dockerfile from the active session.
-
-**Note**: The project key (`--projectKey`) feature provides a stable permanent registry URL. This is a paid/registered feature.
